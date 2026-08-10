@@ -1,12 +1,14 @@
 import logging
 from uuid import UUID
 
+from meridian_events import Topics, TransactionIngested
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.accounts.models import Account, AccountType
 from app.core.encryption import decrypt, encrypt
 from app.core.metrics import transactions_created_total
+from app.core.outbox import write_outbox_event
 from app.institutions.models import Institution, InstitutionStatus
 from app.institutions.plaid_client import (
     PlaidAccount,
@@ -58,9 +60,9 @@ async def link_institution(
     await db.refresh(institution)
 
     # First sync happens inline so the account/transaction list isn't
-    # empty on the very next GET — matches the reference implementation's
-    # UX. A slow first sync blocking this request is an accepted
-    # tradeoff at this phase's scope (see docs/phase6.md).
+    # empty on the very next GET. A slow first sync blocking this
+    # request is an accepted tradeoff at this phase's scope (see
+    # docs/phase6.md).
     await sync_institution(db, plaid_client, institution)
     return institution
 
@@ -179,6 +181,31 @@ async def _upsert_transaction(db: AsyncSession, institution: Institution, plaid_
         external_id=plaid_txn.transaction_id,
     )
     db.add(transaction)
+
+    # Same event the manual-creation path publishes (app/transactions/
+    # router.py) — without this, a Plaid-synced transaction never reaches
+    # enrichment-service, so it can never be categorized and its category
+    # stays NULL forever, regardless of how good the categorizer's rules
+    # are. This was a real bug: Plaid sync never wrote to the outbox at
+    # all, so every synced transaction silently skipped the entire
+    # categorization pipeline.
+    await db.flush()  # assigns transaction.id without committing
+    event = TransactionIngested(
+        transaction_id=transaction.id,
+        account_id=transaction.account_id,
+        user_id=institution.user_id,
+        merchant_name=transaction.merchant_name,
+        amount_minor=transaction.amount_minor,
+        currency=transaction.currency,
+        txn_date=transaction.txn_date,
+    )
+    write_outbox_event(
+        db,
+        topic=Topics.TRANSACTIONS_INGESTED,
+        key=str(transaction.account_id),
+        payload=event.model_dump(mode="json"),
+    )
+
     await db.commit()
     transactions_created_total.labels(source="plaid_sync").inc()
     return 1

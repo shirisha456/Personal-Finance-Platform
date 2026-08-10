@@ -1,5 +1,9 @@
 from datetime import date
 
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import async_sessionmaker
+
+from app.core.outbox import OutboxEvent
 from app.institutions.plaid_client import (
     PlaidAccount,
     PlaidApiError,
@@ -109,6 +113,32 @@ async def test_link_institution_creates_institution_account_and_transaction(
     txn = transactions.json()["items"][0]
     # Plaid amount was +45.0 (outflow); this app's convention is negative = expense.
     assert txn["amount_minor"] == -4500
+
+
+async def test_synced_transaction_publishes_transactions_ingested_outbox_event(
+    authed_client, auth_headers, app, db_engine
+):
+    """Regression test for a real bug: Plaid-synced transactions were
+    created without ever writing to the outbox, so they silently skipped
+    the entire categorization pipeline — every synced transaction stayed
+    Uncategorized forever, no matter how good the categorizer's rules
+    were, because enrichment-service never even saw them."""
+    fake = FakePlaidClient()
+    fake.queue_sync_page(_one_page(accounts=[_plaid_account()], added=[_plaid_txn()]))
+    app.dependency_overrides[get_plaid_client] = lambda: fake
+
+    await authed_client.post(
+        "/api/v1/institutions", json={"public_token": "public-abc"}, headers=auth_headers
+    )
+
+    session_factory = async_sessionmaker(db_engine, expire_on_commit=False)
+    async with session_factory() as session:
+        rows = (
+            await session.scalars(select(OutboxEvent).where(OutboxEvent.topic == "transactions.ingested"))
+        ).all()
+
+    assert len(rows) == 1
+    assert rows[0].payload["merchant_name"] == "Coffee Shop"
 
 
 async def test_link_institution_falls_back_to_generic_name_without_metadata(

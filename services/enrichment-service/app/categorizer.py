@@ -31,6 +31,7 @@ _RULES: dict[str, list[str]] = {
     "Food & Dining": [
         "restaurant", "cafe", "coffee", "starbucks", "diner", "bakery",
         "pizza", "grill", "bistro", "doordash", "ubereats", "grubhub",
+        "mcdonald", "kfc",
     ],
     "Transportation": [
         "uber", "lyft", "gas station", "shell", "chevron", "exxon",
@@ -47,9 +48,17 @@ _RULES: dict[str, list[str]] = {
     ],
     "Health": ["pharmacy", "cvs", "walgreens", "clinic", "hospital", "dental", "doctor"],
     "Shopping": ["amazon", "walmart", "target", "costco", "best buy", "mall"],
-    "Income": ["payroll", "direct deposit", "salary"],
-    "Transfer": ["transfer", "venmo", "zelle", "paypal transfer"],
-    "Savings & Investments": ["brokerage", "401k", "ira contribution", "investment transfer"],
+    "Income": [
+        "payroll", "direct deposit", "salary", "gusto", "ach electronic credit",
+        "intrst pymnt", "interest payment",
+    ],
+    "Transfer": [
+        "transfer", "venmo", "zelle", "paypal transfer", "automatic payment",
+        "credit card", "card payment",
+    ],
+    "Savings & Investments": [
+        "brokerage", "401k", "ira contribution", "investment transfer", "cd deposit",
+    ],
 }
 
 _AI_CACHE_TTL_SECONDS = 30 * 24 * 60 * 60
