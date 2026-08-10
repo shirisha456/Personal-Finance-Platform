@@ -157,6 +157,13 @@ class _FakeMarketDataProvider:
         # symbol to prove a partial result doesn't fail the whole refresh.
         return {symbol: len(symbol) * 1000 for symbol in symbols if symbol != "UNKNOWN"}
 
+    async def search_symbols(self, query: str):
+        from app.investments.market_data import SymbolSearchResult
+
+        if query.lower() != "tesla":
+            return []
+        return [SymbolSearchResult(symbol="TSLA", name="Tesla, Inc.", exchange="NASDAQ")]
+
 
 async def test_refresh_prices_updates_securities_and_skips_unpriced_symbols(
     authed_client, auth_headers, app
@@ -179,6 +186,35 @@ async def test_refresh_prices_updates_securities_and_skips_unpriced_symbols(
     watchlist = await authed_client.get("/api/v1/investments/watchlist", headers=auth_headers)
     unknown = watchlist.json()[0]["security"]
     assert unknown["latest_price_minor"] is None  # provider didn't have a price for it
+
+
+async def test_search_securities_returns_503_when_market_data_not_configured(authed_client, auth_headers):
+    response = await authed_client.get(
+        "/api/v1/investments/securities/search?query=tesla", headers=auth_headers
+    )
+    assert response.status_code == 503
+    assert response.json()["error"]["type"] == "market_data_not_configured"
+
+
+async def test_search_securities_returns_matches_by_company_name(authed_client, auth_headers, app):
+    app.dependency_overrides[get_market_data_provider] = lambda: _FakeMarketDataProvider()
+
+    response = await authed_client.get(
+        "/api/v1/investments/securities/search?query=tesla", headers=auth_headers
+    )
+    assert response.status_code == 200
+    results = response.json()
+    assert results == [{"symbol": "TSLA", "name": "Tesla, Inc.", "exchange": "NASDAQ"}]
+
+
+async def test_search_securities_returns_empty_list_for_no_matches(authed_client, auth_headers, app):
+    app.dependency_overrides[get_market_data_provider] = lambda: _FakeMarketDataProvider()
+
+    response = await authed_client.get(
+        "/api/v1/investments/securities/search?query=nonexistent", headers=auth_headers
+    )
+    assert response.status_code == 200
+    assert response.json() == []
 
 
 async def test_investments_endpoints_require_auth(authed_client):

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api-client";
-import type { Holding, Page, Security, WatchlistItem } from "@/lib/types";
+import type { Holding, Page, Security, SymbolSearchResult, WatchlistItem } from "@/lib/types";
 
 interface CreateHoldingInput {
   account_id: string;
@@ -66,6 +66,20 @@ export function useRemoveFromWatchlist() {
       await apiClient.delete(`/api/v1/investments/watchlist/${id}`);
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["watchlist"] }),
+  });
+}
+
+export function useSearchSecurities(query: string) {
+  return useQuery({
+    queryKey: ["securities-search", query],
+    queryFn: async () =>
+      (await apiClient.get<SymbolSearchResult[]>("/api/v1/investments/securities/search", { params: { query } }))
+        .data,
+    enabled: query.trim().length > 0,
+    // Market data being unconfigured (503) is an expected, quiet state
+    // here — the user can still type a symbol manually — not a retry-
+    // worthy transient failure.
+    retry: false,
   });
 }
 

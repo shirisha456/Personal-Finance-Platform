@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Protocol
 
 import httpx
@@ -11,11 +12,23 @@ class MarketDataNotConfigured(ServiceUnavailableError):
     error_type = "market_data_not_configured"
 
 
+@dataclass
+class SymbolSearchResult:
+    symbol: str
+    name: str
+    exchange: str
+
+
 class MarketDataProvider(Protocol):
     async def get_prices(self, symbols: list[str]) -> dict[str, int]:
         """Returns {symbol: price_minor} for whichever symbols the
         provider could price — a symbol it doesn't recognize is simply
         absent from the result, not an error for the whole batch."""
+        ...
+
+    async def search_symbols(self, query: str) -> list[SymbolSearchResult]:
+        """Looks up tickers by company name or partial symbol — lets a
+        user type "Tesla" instead of needing to already know "TSLA"."""
         ...
 
 
@@ -56,6 +69,34 @@ class TwelveDataProvider:
             if isinstance(entry, dict) and "price" in entry:
                 prices[symbol] = round(float(entry["price"]) * 100)
         return prices
+
+    async def search_symbols(self, query: str) -> list[SymbolSearchResult]:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(
+                f"{self._base_url}/symbol_search",
+                params={"symbol": query, "apikey": self._api_key},
+            )
+            response.raise_for_status()
+            payload = response.json()
+
+        results: list[SymbolSearchResult] = []
+        for entry in payload.get("data") or []:
+            # Filtered to USD — this app has no currency-conversion model
+            # for security prices (Security has no currency column;
+            # get_prices() above assumes whatever it fetches is directly
+            # comparable). Surfacing a EUR/GBP-denominated listing here
+            # would let a user pick a symbol whose price is silently
+            # wrong once treated as USD everywhere else.
+            if entry.get("currency") != "USD":
+                continue
+            results.append(
+                SymbolSearchResult(
+                    symbol=entry["symbol"],
+                    name=entry.get("instrument_name") or entry["symbol"],
+                    exchange=entry.get("exchange") or "",
+                )
+            )
+        return results[:10]
 
 
 def get_market_data_provider(settings: Settings = Depends(get_settings)) -> MarketDataProvider:

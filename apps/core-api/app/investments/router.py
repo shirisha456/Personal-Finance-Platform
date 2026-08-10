@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,6 +19,7 @@ from app.investments.schemas import (
     HoldingCreate,
     HoldingResponse,
     SecurityResponse,
+    SymbolSearchResponse,
     WatchlistCreate,
     WatchlistResponse,
 )
@@ -167,6 +168,15 @@ async def delete_watchlist_item(
     item = await get_owned(db, Watchlist, item_id, current_user.id)
     await db.delete(item)
     await db.commit()
+
+
+@router.get("/securities/search", response_model=list[SymbolSearchResponse])
+async def search_securities(
+    query: str = Query(min_length=1, max_length=100),
+    provider: MarketDataProvider = Depends(get_market_data_provider),
+) -> list[SymbolSearchResponse]:
+    results = await provider.search_symbols(query)
+    return [SymbolSearchResponse(symbol=r.symbol, name=r.name, exchange=r.exchange) for r in results]
 
 
 @router.post("/prices/refresh", response_model=list[SecurityResponse])

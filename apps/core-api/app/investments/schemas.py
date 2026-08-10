@@ -14,6 +14,14 @@ class SecurityResponse(BaseModel):
     latest_price_at: datetime | None
 
 
+class SymbolSearchResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    symbol: str
+    name: str
+    exchange: str
+
+
 class HoldingCreate(BaseModel):
     account_id: UUID
     symbol: str = Field(min_length=1, max_length=20)

@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { SearchIcon, XIcon } from "lucide-react";
 
 import { useAccounts } from "@/hooks/use-accounts";
-import { useCreateHolding } from "@/hooks/use-investments";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useCreateHolding, useSearchSecurities } from "@/hooks/use-investments";
 import { apiErrorMessage } from "@/lib/api-client";
+import type { SymbolSearchResult } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,11 +29,44 @@ export function AddHoldingDialog() {
 
   const [open, setOpen] = useState(false);
   const [accountId, setAccountId] = useState("");
-  const [symbol, setSymbol] = useState("");
-  const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
   const [costBasis, setCostBasis] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  // The one thing that changed: a holding can no longer be created from
+  // two disconnected inputs where typing garbage into "Symbol" silently
+  // bypassed search entirely. Now there is exactly one selected security
+  // at a time — set either by picking a real search result, or, only if
+  // the user explicitly opts in, by typing one in manually.
+  const [selected, setSelected] = useState<SymbolSearchResult | null>(null);
+  const [manualEntry, setManualEntry] = useState(false);
+  const [manualSymbol, setManualSymbol] = useState("");
+  const [manualName, setManualName] = useState("");
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
+  const debouncedQuery = useDebouncedValue(searchQuery, 300);
+  const { data: searchResults, isFetching: isSearching, isError: searchUnavailable } =
+    useSearchSecurities(debouncedQuery);
+
+  const showResults = searchFocused && debouncedQuery.trim().length > 0;
+
+  function resetSecuritySelection() {
+    setSelected(null);
+    setManualEntry(false);
+    setManualSymbol("");
+    setManualName("");
+    setSearchQuery("");
+  }
+
+  function selectResult(result: SymbolSearchResult) {
+    setSelected(result);
+    setSearchQuery("");
+    setSearchFocused(false);
+  }
+
+  const canSubmit =
+    !!accountId && (selected !== null || (manualEntry && manualSymbol.trim().length > 0));
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -38,14 +74,13 @@ export function AddHoldingDialog() {
     try {
       await createHolding.mutateAsync({
         account_id: accountId,
-        symbol,
-        name: name || undefined,
+        symbol: selected ? selected.symbol : manualSymbol.trim(),
+        name: selected ? selected.name : manualName.trim() || undefined,
         quantity: Number.parseFloat(quantity) || 0,
         cost_basis_minor: Math.round((Number.parseFloat(costBasis) || 0) * 100),
       });
       setOpen(false);
-      setSymbol("");
-      setName("");
+      resetSecuritySelection();
       setQuantity("");
       setCostBasis("");
     } catch (err) {
@@ -84,16 +119,121 @@ export function AddHoldingDialog() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="holding-symbol">Symbol</Label>
-                  <Input id="holding-symbol" required value={symbol} onChange={(e) => setSymbol(e.target.value)} />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="holding-name">Name (optional)</Label>
-                  <Input id="holding-name" value={name} onChange={(e) => setName(e.target.value)} />
-                </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label>Security</Label>
+
+                {selected ? (
+                  <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm">
+                    <div>
+                      <span className="font-medium">{selected.symbol}</span>{" "}
+                      <span className="text-muted-foreground">{selected.name}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={resetSecuritySelection}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <XIcon className="size-4" />
+                      <span className="sr-only">Clear selection</span>
+                    </button>
+                  </div>
+                ) : manualEntry ? (
+                  <div className="flex flex-col gap-2">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor="holding-manual-symbol">Symbol</Label>
+                        <Input
+                          id="holding-manual-symbol"
+                          required
+                          value={manualSymbol}
+                          onChange={(e) => setManualSymbol(e.target.value.toUpperCase())}
+                          placeholder="TSLA"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor="holding-manual-name">Name (optional)</Label>
+                        <Input
+                          id="holding-manual-name"
+                          value={manualName}
+                          onChange={(e) => setManualName(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Entering manually skips symbol validation — double check the ticker is correct.{" "}
+                      <button type="button" className="underline" onClick={() => setManualEntry(false)}>
+                        Search instead
+                      </button>
+                    </p>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <div className="relative">
+                      <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        className="pl-8"
+                        placeholder="Search by company name or symbol — Tesla, Apple, VTI…"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onFocus={() => setSearchFocused(true)}
+                        onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+                      />
+                    </div>
+                    {showResults && (
+                      <div className="absolute top-full z-10 mt-1 w-full rounded-lg border border-border bg-popover shadow-md">
+                        {isSearching ? (
+                          <p className="p-2.5 text-xs text-muted-foreground">Searching…</p>
+                        ) : searchUnavailable ? (
+                          <div className="p-2.5 text-xs text-muted-foreground">
+                            Symbol search isn&rsquo;t available right now.{" "}
+                            <button
+                              type="button"
+                              className="underline"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => setManualEntry(true)}
+                            >
+                              Enter it manually instead
+                            </button>
+                          </div>
+                        ) : searchResults && searchResults.length > 0 ? (
+                          <ul className="max-h-56 overflow-y-auto py-1">
+                            {searchResults.map((result) => (
+                              <li key={`${result.symbol}-${result.exchange}`}>
+                                <button
+                                  type="button"
+                                  className="flex w-full flex-col items-start gap-0.5 px-2.5 py-1.5 text-left text-sm hover:bg-accent"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => selectResult(result)}
+                                >
+                                  <span className="font-medium">
+                                    {result.symbol}{" "}
+                                    <span className="font-normal text-muted-foreground">{result.exchange}</span>
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">{result.name}</span>
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <div className="p-2.5 text-xs text-muted-foreground">
+                            No matches for &ldquo;{debouncedQuery}&rdquo;.{" "}
+                            <button
+                              type="button"
+                              className="underline"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => setManualEntry(true)}
+                            >
+                              Enter it manually
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="holding-quantity">Quantity</Label>
@@ -122,7 +262,7 @@ export function AddHoldingDialog() {
               </div>
               {error && <p className="text-sm text-destructive">{error}</p>}
               <DialogFooter>
-                <Button type="submit" disabled={createHolding.isPending || !accountId}>
+                <Button type="submit" disabled={createHolding.isPending || !canSubmit}>
                   {createHolding.isPending ? "Adding…" : "Add holding"}
                 </Button>
               </DialogFooter>

@@ -111,6 +111,12 @@ export interface Security {
   latest_price_at: string | null;
 }
 
+export interface SymbolSearchResult {
+  symbol: string;
+  name: string;
+  exchange: string;
+}
+
 export interface Holding {
   id: string;
   account_id: string;
