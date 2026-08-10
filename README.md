@@ -6,11 +6,11 @@ tracking, an event-driven pipeline (Kafka/Redpanda) that categorizes
 transactions and detects anomalies in real time, AI-generated monthly
 insights, and full observability across the async pipeline.
 
-This repository was rebuilt from an earlier version in 16 incremental,
-reviewed phases — see [Development phases](#development-phases) below,
-all complete. Every phase's design decisions live in its own doc under
-`docs/`, and every architectural decision worth remembering has an ADR
-under [`docs/adr/`](docs/adr/). Start with
+This repository was built in 16 incremental, reviewed phases — see
+[Development phases](#development-phases) below, all complete. Every
+phase's design decisions live in its own doc under `docs/`, and every
+architectural decision worth remembering has an ADR under
+[`docs/adr/`](docs/adr/). Start with
 [`docs/case-study.md`](docs/case-study.md) for the short version, or
 [`docs/architecture.md`](docs/architecture.md) for the system diagrams.
 
@@ -36,9 +36,9 @@ and anomaly detection don't block the request that created them.
 - One consistent error envelope for every failure path (deliberate,
   validation, routing, and unhandled exceptions alike) — see
   [`docs/phase1.md`](docs/phase1.md)
-- A per-account, DB-level unique constraint backing transaction dedupe
-  (the reference implementation's dedupe check was app-level-only and
-  had a real race condition) — see [`docs/phase3.md`](docs/phase3.md)
+- A per-account, DB-level unique constraint backing transaction dedupe —
+  a race-safe guarantee an app-level-only check under concurrent syncs
+  can't give you — see [`docs/phase3.md`](docs/phase3.md)
 - Idempotency-key protected transaction creation, Redis-backed, fails
   open on a Redis outage rather than blocking writes — see
   [ADR-0002](docs/adr/0002-fail-open-redis-dependencies.md)
@@ -52,8 +52,8 @@ and anomaly detection don't block the request that created them.
   stand-in — [ADR-0003](docs/adr/0003-local-envelope-encryption-stand-in.md));
   a real REST client instead of the official SDK specifically because
   that SDK is synchronous and would violate ADR-0001; a `has_more` sync
-  loop and a `status=error` transition the reference implementation
-  didn't have — see [`docs/phase6.md`](docs/phase6.md)
+  loop and a `status=error` transition for when a sync fails outright —
+  see [`docs/phase6.md`](docs/phase6.md)
 - Proved migration reversibility for real (`upgrade` → `downgrade base`
   → `upgrade`, not just written and assumed to work) — caught and fixed
   a Postgres-native-enum cleanup bug this way, in both a new and an
@@ -73,12 +73,10 @@ and anomaly detection don't block the request that created them.
   end-to-end running the real consumer process against real Postgres,
   Redis, and Redpanda, not just a fake producer — see
   [`docs/phase8.md`](docs/phase8.md)
-- Fixed the reference implementation's most significant correctness bug:
-  `anomaly-service` wasn't actually idempotent despite its own ADR
-  claiming it was. A real `UNIQUE (source_event_id, alert_type)`
-  constraint now backs it — proven with a test that simulates message
-  redelivery and asserts no duplicate alert is created — see
-  [`docs/phase9.md`](docs/phase9.md)
+- `anomaly-service` is provably idempotent, not just documented as such:
+  a real `UNIQUE (source_event_id, alert_type)` constraint backs it —
+  proven with a test that simulates message redelivery and asserts no
+  duplicate alert is created — see [`docs/phase9.md`](docs/phase9.md)
 - A short-lived, single-use WebSocket ticket instead of putting the
   long-lived access token in the connection URL — verified with a real
   browser-shaped WebSocket client receiving a live alert end-to-end
@@ -91,13 +89,13 @@ and anomaly detection don't block the request that created them.
   [ADR-0008](docs/adr/0008-grounded-insight-generation-with-fallback.md);
   verified end-to-end including live delivery over the same WebSocket
   pipeline Phase 9 built — see [`docs/phase10.md`](docs/phase10.md)
-- The frontend was studied against the actual rebuilt backend before a
-  line of it was written, catching real mismatches the reference never
-  hit against this API: bare-array assumptions that would crash against
-  the backend's real `Page[T]` responses, a request field name that
-  didn't match the schema, and a hardcoded WebSocket auth pattern the
-  backend was specifically redesigned to close off (Phase 9's ticket
-  flow) — see [`docs/phase11.md`](docs/phase11.md)
+- The frontend was built directly against the real, running backend API
+  before a line of UI code was written, catching real mismatches early:
+  bare-array assumptions that would crash against the backend's real
+  `Page[T]` responses, a request field name that didn't match the
+  schema, and a hardcoded WebSocket auth pattern the ticket-based flow
+  (Phase 9) was specifically designed to close off — see
+  [`docs/phase11.md`](docs/phase11.md)
 - Two real bugs caught and fixed during frontend verification, not
   glossed over: a session that silently dropped on every page reload,
   and closed dialogs/selects that never actually unmounted — see
@@ -107,11 +105,10 @@ and anomaly detection don't block the request that created them.
   traces as one connected request in Tempo, not four separate ones — a
   W3C traceparent is hand-carried through the outbox and Kafka message
   headers at every hop, since Kafka has no built-in trace propagation
-  the way HTTP middleware does. Fixed a gap the reference had even with
-  its own Grafana trace-to-logs link wired up: no log line anywhere
-  carried a trace_id, so that link had nothing to correlate — this
-  rebuild's structured JSON logs do, verified with real trace and log
-  data pulled directly from Tempo's and Loki's own APIs, not just
+  the way HTTP middleware does. Every structured JSON log line also
+  carries the active `trace_id`, so Grafana's trace-to-logs link has
+  something real to correlate against — verified with real trace and
+  log data pulled directly from Tempo's and Loki's own APIs, not just
   code review — see [`docs/phase12.md`](docs/phase12.md)
 - Two chaos tests proving this architecture's resilience claims against
   the real running stack, not just by reasoning about the code: killing
@@ -122,13 +119,13 @@ and anomaly detection don't block the request that created them.
   the transactional outbox (ADR-0005) never makes a synchronous Kafka
   call — see [`docs/phase13.md`](docs/phase13.md)
 - Real infrastructure-as-code (two Terraform environments, two Helm
-  charts) with a CI job that actually validates it on every push — a
-  gap the reference had no CI coverage for at all — paired with an
-  explicit, permanent record of what "validated" does and doesn't mean
-  here: never applied against real AWS, by design, not by oversight.
-  The one instance size this project actually recommends deploying to
-  was chosen from real `docker stats` measurements of its own stack, not
-  a guess — see [ADR-0011](docs/adr/0011-terraform-written-not-applied.md),
+  charts) with a CI job that actually validates it on every push,
+  paired with an explicit, permanent record of what "validated" does
+  and doesn't mean here: never applied against real AWS, by design, not
+  by oversight. The one instance size this project actually recommends
+  deploying to was chosen from real `docker stats` measurements of its
+  own stack, not a guess — see
+  [ADR-0011](docs/adr/0011-terraform-written-not-applied.md),
   [ADR-0012](docs/adr/0012-single-ec2-instance-sizing.md), and
   [`docs/phase14.md`](docs/phase14.md)
 
@@ -186,6 +183,9 @@ actually implemented today versus planned._
   security independently of the on-demand refresh endpoint, deliberately
   built without a Kafka topic since nothing consumes one yet — see
   [ADR-0014](docs/adr/0014-market-data-service-no-kafka-topic.md)
+- Symbol search for adding investment holdings: search a company name or
+  ticker against a real market-data provider and pick from actual
+  matches, rather than free-typing a symbol with no validation
 
 _More added as each phase lands._
 
@@ -262,9 +262,9 @@ Each phase's design decisions and verification checklist:
 
 ### Post-phase-15 additions
 
-Three real gaps closed after the phase-15 documentation pass — each one
-was either a self-documented known gap or an explicitly deferred piece
-of the original scope, not something newly discovered by accident:
+Real gaps closed after the phase-15 documentation pass — each one was
+either a self-documented known gap or an explicitly deferred piece of
+the original scope, not something newly discovered by accident:
 
 - **Rate limiting on `/login`/`/register`** — was listed under
   `docs/security.md`'s "known gaps" since Phase 2; closed with a
@@ -280,6 +280,10 @@ of the original scope, not something newly discovered by accident:
   pipeline existed. Built as a scheduled poller, deliberately without a
   Kafka topic — see
   [ADR-0014](docs/adr/0014-market-data-service-no-kafka-topic.md).
+- **Symbol search for holdings** — replaced free-typed, unvalidated
+  ticker entry with a real search against the market-data provider;
+  manual entry is still available but is now an explicit, clearly-labeled
+  opt-in rather than the default path.
 
 ## Local development setup
 
@@ -358,9 +362,10 @@ alembic revision --autogenerate -m "description"
 
 ```bash
 cd apps/core-api
-pytest -v          # 116 tests: health, errors, config, auth/security, accounts, transactions,
-                   # idempotency, budgets, goals, net worth, investments, encryption,
-                   # institutions, outbox, alerts, ws-tickets, insights
+pytest -v          # 132 tests: health, errors, config, auth/security, rate limiting,
+                   # accounts, transactions, idempotency, budgets, goals, net worth,
+                   # investments, symbol search, forecast, encryption, institutions,
+                   # outbox, alerts, ws-tickets, insights
 ruff check .
 
 cd ../../libs/events
@@ -378,6 +383,10 @@ ruff check .
 cd ../../services/notification-service
 pytest -v          # 5 tests: topic-to-notification-type mapping, Redis pub/sub fan-out
 ruff check .
+
+cd ../../services/market-data-service
+pytest -v          # 11 tests: symbol tracking, provider search/pricing, batch-failure isolation
+ruff check .
 ```
 
 ## Frontend commands
@@ -390,23 +399,25 @@ npm run typecheck    # tsc --noEmit
 npm run lint          # eslint .
 ```
 
-No automated test suite yet (matches the reference — see
-[`docs/phase11.md`](docs/phase11.md)); verification for this phase was
-manual, against the real backend and a real browser.
+No automated test suite yet — see [`docs/phase11.md`](docs/phase11.md);
+verification for this phase was manual, against the real backend and a
+real browser.
 
 ## Docker Compose instructions
 
-`docker-compose.yml` (project name pinned to `meridian-rebuild` — see
+`docker-compose.yml` (project name pinned explicitly — see
 [`docs/phase0.md`](docs/phase0.md)) starts Postgres (`localhost:5433`),
 Redis (`localhost:6380`), Redpanda (`localhost:19092`), a one-shot
 `redpanda-topics` job that creates every topic in
 `meridian_events.Topics`, `core-api` (`localhost:8000`, depends on
 Postgres/Redis being healthy and `redpanda-topics` completing
 successfully; `alembic upgrade head` runs automatically on container
-start), `enrichment-service`, `anomaly-service`, and
-`notification-service` (each exposes its `/health` + `/metrics` port —
-8080/8081/8082 respectively — inside the container network only, not
-published to the host), and the observability stack below.
+start), `enrichment-service`, `anomaly-service`, `notification-service`
+(each exposes its `/health` + `/metrics` port — 8080/8081/8082
+respectively — inside the container network only, not published to the
+host), `market-data-service` (`:8083`, a scheduled poller rather than a
+Kafka consumer — see [ADR-0014](docs/adr/0014-market-data-service-no-kafka-topic.md)),
+and the observability stack below.
 
 ## Observability instructions
 
@@ -425,11 +436,10 @@ docker compose up -d tempo prometheus loki promtail grafana
   receiver (`:4318`) is also published to the host so a service run
   outside Docker can still export traces.
 - **Loki** — no host port published; reachable only via Grafana's
-  proxied datasource or from another container on the compose network
-  (matches the reference's own design).
+  proxied datasource or from another container on the compose network.
 
 Tracing is opt-in per service via `OTEL_EXPORTER_OTLP_ENDPOINT`
-(pre-set to `http://tempo:4318` for all four app services in
+(pre-set to `http://tempo:4318` for all app services in
 `docker-compose.yml`; empty by default outside Docker, so a plain
 `pytest` run or a bare `uvicorn --reload` never depends on Tempo being
 up). See [`docs/phase12.md`](docs/phase12.md) and
@@ -442,7 +452,9 @@ traced request walked end-to-end through Tempo and Loki.
 Market data (Twelve Data, optional — [`docs/phase5.md`](docs/phase5.md)):
 without `MARKET_DATA_API_KEY`, `POST /investments/prices/refresh` returns
 a 503 and holdings/watchlist entries simply keep `latest_price_minor:
-null`, "no price yet" — never a mock/synthetic price.
+null`, "no price yet" — never a mock/synthetic price. Symbol search
+degrades the same way: a 503 with a clear message and an explicit
+manual-entry fallback in the UI, never a fake match.
 
 Plaid (optional — [`docs/phase6.md`](docs/phase6.md)): without
 `PLAID_CLIENT_ID`/`PLAID_SECRET`, `/institutions/link-token` and
@@ -469,37 +481,38 @@ defaults), JWT access tokens (15 min), rotating refresh tokens with
 theft/reuse detection (a replayed already-used-or-revoked token kills its
 entire token family), refresh tokens stored only as a SHA-256 hash,
 HttpOnly/SameSite=lax cookies scoped to `/api/v1/auth`, a startup guard
-that refuses to boot in production with the placeholder JWT secret, and
+that refuses to boot in production with the placeholder JWT secret,
+per-IP rate limiting on `/login`/`/register` (Redis-backed, fail-open —
+[ADR-0013](docs/adr/0013-per-ip-fixed-window-rate-limiting.md)), and
 Plaid access tokens encrypted at rest (Fernet, a documented KMS
 stand-in — [ADR-0003](docs/adr/0003-local-envelope-encryption-stand-in.md)).
 Documented fully in [`docs/security.md`](docs/security.md) (Phase 15).
 
 ## CI/CD summary
 
-`.github/workflows/ci.yml` runs six jobs on every push to `main` and
-every pull request: `events-lib` (installs and tests `libs/events` on
-its own), `backend` (installs `libs/events` then `apps/core-api`, runs
+`.github/workflows/ci.yml` runs jobs on every push to `main` and every
+pull request: `events-lib` (installs and tests `libs/events` on its
+own), `backend` (installs `libs/events` then `apps/core-api`, runs
 `alembic upgrade head` against a real Postgres service container, runs
 `pytest`, runs `ruff check .`), `enrichment-service`,
-`anomaly-service`, `notification-service` (each installs `libs/events`
-then itself, runs its own test suite and lint), and `frontend`
-(`npm ci`, `tsc --noEmit`, `eslint .`, `npm run build` — no test suite
-yet, matching the reference; see [`docs/phase11.md`](docs/phase11.md)).
-None of these five jobs spin up a real Redpanda service container — the
-outbox/Kafka tests all use a fake producer/consumer; the real-broker
-round-trip (including, from Phase 9, all four services running
-simultaneously against real Postgres/Redis/Redpanda) is verified
-manually each phase touching it (see [`docs/phase7.md`](docs/phase7.md)
-onward), matching the reference implementation's own CI scope. A
-seventh job, `chaos-smoke-test` (gated to pushes on `main`, since it
-needs a full `docker compose up --build` and deliberately kills/restarts
+`anomaly-service`, `notification-service`, `market-data-service` (each
+installs its own dependencies, runs its own test suite and lint), and
+`frontend` (`npm ci`, `tsc --noEmit`, `eslint .`, `npm run build` — no
+test suite yet; see [`docs/phase11.md`](docs/phase11.md)). None of these
+jobs spin up a real Redpanda service container — the outbox/Kafka tests
+all use a fake producer/consumer; the real-broker round-trip (including,
+from Phase 9, all four Kafka-aware services running simultaneously
+against real Postgres/Redis/Redpanda) is verified manually each phase
+touching it (see [`docs/phase7.md`](docs/phase7.md) onward). A further
+job, `chaos-smoke-test` (gated to pushes on `main`, since it needs a
+full `docker compose up --build` and deliberately kills/restarts
 containers — too slow for every PR), runs both scripts under `chaos/`
 against the real stack — see [`docs/phase13.md`](docs/phase13.md). An
-eighth job, `infra-validate`, runs `terraform fmt -check`/`validate`
-against every module and both environments under `infra/terraform/`,
-and `helm lint`/`template` against both charts (including all three
-`worker` per-service values files) — genuine static validation the
-reference's CI never had at all; see
+`infra-validate` job runs `terraform fmt -check`/`validate` against
+every module and both environments under `infra/terraform/`, and
+`helm lint`/`template` against both charts (including all three
+`worker` per-service values files) — genuine static validation catching
+real config errors before they'd ever reach a deploy; see
 [`docs/phase14.md`](docs/phase14.md) and
 [ADR-0011](docs/adr/0011-terraform-written-not-applied.md) for exactly
 what that validation does and doesn't prove.
@@ -550,15 +563,16 @@ logged and skipped, an accepted, documented gap (see
 [`docs/phase8.md`](docs/phase8.md), [`docs/phase9.md`](docs/phase9.md)).
 Redis Pub/Sub notifications have no persistence — a live alert missed
 while disconnected isn't redelivered over the WebSocket, though it's
-still visible via `GET /api/v1/alerts` (the system of record). No Plaid webhook receiver — sync is user-triggered
-only (see [`docs/phase6.md`](docs/phase6.md)). The budgets-goals-networth
-upsert operations have a documented, accepted race condition under truly
+still visible via `GET /api/v1/alerts` (the system of record). No Plaid
+webhook receiver — sync is user-triggered only (see
+[`docs/phase6.md`](docs/phase6.md)). The budgets-goals-networth upsert
+operations have a documented, accepted race condition under truly
 concurrent identical requests (see [`docs/phase4.md`](docs/phase4.md)) —
 not a concern for this app's single-user-driven write pattern. The
-frontend has no automated test suite yet (matches the reference) and no
-CSS open/close animations on any dialog/popover/select — a deliberate
-tradeoff, not an oversight, made after those animations turned out to
-break popups actually closing; see
+frontend has no automated test suite yet and no CSS open/close
+animations on any dialog/popover/select — a deliberate tradeoff, not an
+oversight, made after those animations turned out to break popups
+actually closing; see
 [ADR-0009](docs/adr/0009-no-popup-close-animations.md). Money is
 formatted in a fixed `en-US` locale regardless of an account's actual
 currency — correct for USD, cosmetically off for others (see
@@ -614,7 +628,11 @@ The full list with rationale is in
   [0011](docs/adr/0011-terraform-written-not-applied.md) Terraform
   written, not applied,
   [0012](docs/adr/0012-single-ec2-instance-sizing.md) single-EC2
-  instance sizing
+  instance sizing,
+  [0013](docs/adr/0013-per-ip-fixed-window-rate-limiting.md) per-IP
+  fixed-window rate limiting,
+  [0014](docs/adr/0014-market-data-service-no-kafka-topic.md)
+  market-data-service without a Kafka topic
 - [`docs/phase0.md`](docs/phase0.md), [`docs/phase1.md`](docs/phase1.md),
   [`docs/phase2.md`](docs/phase2.md), [`docs/phase3.md`](docs/phase3.md),
   [`docs/phase4.md`](docs/phase4.md), [`docs/phase5.md`](docs/phase5.md),

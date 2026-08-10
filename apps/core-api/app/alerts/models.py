@@ -23,10 +23,10 @@ class AlertSeverity(str, enum.Enum):
 class Alert(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "alerts"
     __table_args__ = (
-        # The idempotency fix: the reference implementation had no
-        # constraint at all here, so a redelivered transactions.enriched
-        # message created a duplicate alert row (and a duplicate
-        # alerts.raised event) every time. One event can legitimately
+        # The idempotency guarantee: without this, a redelivered
+        # transactions.enriched message would create a duplicate alert
+        # row (and a duplicate alerts.raised event) every time. One
+        # event can legitimately
         # trigger more than one alert *type* (e.g. both a duplicate
         # charge and a spend spike on the same transaction) — the
         # constraint is on the (event, type) pair, not the event alone.
@@ -42,8 +42,8 @@ class Alert(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     severity: Mapped[AlertSeverity] = mapped_column(Enum(AlertSeverity, name="alert_severity"))
     title: Mapped[str] = mapped_column(String(255))
     detail: Mapped[str] = mapped_column(Text)
-    # A real foreign key this time — the reference implementation's
-    # equivalent column had no referential integrity at all.
+    # A real foreign key, not a bare Uuid column with no referential
+    # integrity.
     related_transaction_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("transactions.id", ondelete="SET NULL"), nullable=True
     )

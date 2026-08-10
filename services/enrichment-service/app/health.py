@@ -29,12 +29,11 @@ class _HealthHandler(BaseHTTPRequestHandler):
 
 def start_health_server(port: int) -> HTTPServer:
     """One minimal HTTP server on its own thread serving both `/health`
-    (so `docker compose`/Kubernetes can tell this process is alive — the
-    reference implementation had no Dockerfile healthcheck for any of its
-    four Python services) and `/metrics` (Prometheus scrape target,
-    Phase 12) — one port for both rather than the reference's two
-    separate mechanisms (a bare prometheus_client.start_http_server
-    alongside no health endpoint at all)."""
+    (so `docker compose`/Kubernetes can tell this process is alive) and
+    `/metrics` (Prometheus scrape target, Phase 12) — one port for both
+    rather than two separate mechanisms (a bare
+    prometheus_client.start_http_server alongside no health endpoint at
+    all)."""
     server = HTTPServer(("0.0.0.0", port), _HealthHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()

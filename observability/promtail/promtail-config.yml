@@ -17,7 +17,7 @@ scrape_configs:
       # Guards against a shared Docker daemon running sibling projects —
       # only tail containers that belong to this compose project.
       - source_labels: ["__meta_docker_container_label_com_docker_compose_project"]
-        regex: "meridian-rebuild"
+        regex: "meridian"
         action: keep
       - source_labels: ["__meta_docker_container_name"]
         regex: "/(.*)"

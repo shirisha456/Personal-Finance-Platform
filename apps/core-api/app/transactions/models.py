@@ -14,8 +14,7 @@ if TYPE_CHECKING:
 class Transaction(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "transactions"
     __table_args__ = (
-        # Scoped per-account, unlike the reference implementation's global
-        # (and non-unique, app-level-only) dedupe check — a Plaid
+        # Scoped per-account, not global — a Plaid
         # transaction_id is only guaranteed unique within its own
         # account's sync stream, and a DB-level constraint makes the
         # dedupe race-safe under concurrent syncs instead of relying on a

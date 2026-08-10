@@ -12,21 +12,18 @@ them against a real `docker compose up` stack on every push to `main`.
 
 ## What's here
 
-- **`chaos/test_enrichment_recovery.py`** — adapted from the reference
-  implementation's own chaos test (same design, same claim: kill
-  `enrichment-service` mid-pipeline, create a transaction, confirm it
-  stays uncategorized while the consumer is down, restart the container,
-  confirm it gets categorized once the consumer group rejoins and
-  reprocesses the pending message). Container name updated to this
-  project's actual compose naming (`meridian-rebuild-enrichment-service-1`,
-  not the reference's `meridian-enrichment-service-1`).
-- **`chaos/test_outbox_broker_outage.py`** — new, not in the reference.
-  A different failure mode: the *broker itself* down, not a consumer.
-  Stops Redpanda entirely, creates a transaction, and asserts three
-  things the reference's test doesn't cover: the request still succeeds
-  (201) and does so in well under a second (not blocked on a Kafka
-  connection attempt), `GET /ready` stays 200 throughout (the app has no
-  synchronous Kafka dependency to report unready over), and the
+- **`chaos/test_enrichment_recovery.py`** — kills `enrichment-service`
+  mid-pipeline, creates a transaction, confirms it stays uncategorized
+  while the consumer is down, restarts the container, confirms it gets
+  categorized once the consumer group rejoins and reprocesses the
+  pending message. References this project's actual compose container
+  naming (`meridian-enrichment-service-1`).
+- **`chaos/test_outbox_broker_outage.py`** — a different failure mode:
+  the *broker itself* down, not a consumer. Stops Redpanda entirely,
+  creates a transaction, and asserts three things: the request still
+  succeeds (201) and does so in well under a second (not blocked on a
+  Kafka connection attempt), `GET /ready` stays 200 throughout (the app
+  has no synchronous Kafka dependency to report unready over), and the
   transaction correctly stays uncategorized until Redpanda comes back
   and the outbox publisher's retry loop catches up. This is the more
   fundamental of the two claims for this architecture specifically —
@@ -35,9 +32,8 @@ them against a real `docker compose up` stack on every push to `main`.
   to touch Kafka synchronously at all.
 
 Both scripts use only the standard library (`urllib`, `subprocess`) —
-no dependency install needed to run them, matching the reference's own
-choice so `python3 chaos/test_*.py` works with nothing but the stack
-itself running.
+no dependency install needed, so `python chaos/test_*.py` works with
+nothing but the stack itself running.
 
 ## CI wiring
 
@@ -54,7 +50,7 @@ stack down (`docker compose down -v`) unconditionally afterward.
 
 | Decision | Choice | Rejected alternative |
 |---|---|---|
-| Two chaos scenarios, not one | Consumer-down (reference's own test) *and* broker-down (new) | Just the reference's one scenario — leaves the outbox pattern's actual headline claim (the API never depends on Kafka) untested; a broker outage is a meaningfully different failure mode than one consumer dying, and this architecture makes a specific promise about it |
+| Two chaos scenarios, not one | Consumer-down *and* broker-down | Just the consumer-down scenario — leaves the outbox pattern's actual headline claim (the API never depends on Kafka) untested; a broker outage is a meaningfully different failure mode than one consumer dying, and this architecture makes a specific promise about it |
 | Assertion style | Poll-with-timeout against real HTTP responses (`GET /api/v1/transactions/{id}`), not mocks or direct DB inspection | Checking the outbox table directly — would prove less: the actual user-facing contract is "does the transaction eventually get categorized," which only the API surface can confirm end-to-end |
 | CI gating | `main`-only, not every PR | Every PR — each chaos run costs real wall-clock time (container kill + rejoin + rebalance + a 60s Redpanda health-repoll in the broker-outage test) for a class of bug (crash-recovery correctness) that changes rarely; `main`-only catches regressions before they reach anyone without slowing down routine PR iteration |
 

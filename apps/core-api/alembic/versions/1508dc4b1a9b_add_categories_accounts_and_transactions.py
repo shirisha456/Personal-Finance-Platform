@@ -65,9 +65,8 @@ def upgrade() -> None:
 
     # Seed the fixed system category taxonomy. UUIDs are deterministic
     # (uuid5, not uuid4) and the insert uses ON CONFLICT DO NOTHING keyed
-    # on the unique `name` column — unlike the reference implementation's
-    # seed migration, re-running this upgrade (e.g. after a manual partial
-    # rollback) does not duplicate rows.
+    # on the unique `name` column, so re-running this upgrade (e.g.
+    # after a manual partial rollback) does not duplicate rows.
     op.execute(
         """
         INSERT INTO categories (id, name, parent_id, is_system, created_at) VALUES

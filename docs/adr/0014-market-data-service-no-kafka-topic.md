@@ -28,12 +28,12 @@ No `prices.updated` topic is defined, because nothing in this codebase
 would consume it today. That is exactly the "dead contract" problem
 `docs/phase7.md` explicitly refused to create when Phase 7 itself was
 scoped ("market data is an on-demand endpoint, not a Kafka producer...
-adding those two topics now would repeat the exact dead-contract problem
-found in the reference implementation"). Building the topic anyway,
-now, for the same reason that was rejected then, would be inconsistent
-with this project's own stated engineering standard — not a stricter
-reading of the original phase docs, but the same one applied at the
-point it was actually supposed to be revisited.
+defining those two topics now would create a dead contract — an event
+schema with no consumer, silently untested and unused"). Building the
+topic anyway, now, for the same reason that was rejected then, would be
+inconsistent with this project's own stated engineering standard — not
+a stricter reading of the original phase docs, but the same one applied
+at the point it was actually supposed to be revisited.
 
 ## Alternatives considered
 

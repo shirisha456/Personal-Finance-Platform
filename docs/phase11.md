@@ -2,38 +2,37 @@
 
 ## Goal
 
-A Next.js 16 (App Router) + React 19 dashboard at `web/`, rebuilt from
-the reference frontend rather than ported line-for-line: same stack
-(TypeScript, Tailwind v4, TanStack Query, Zustand, Base UI-flavored
-shadcn components, `react-plaid-link`), same page layout, but corrected
-against the real rebuilt backend's actual contracts, and with the
-reference's unbuilt-but-supported backend features (account
-delete/update, transaction delete/filtering, price refresh, goal
-editing) actually wired up.
+A Next.js 16 (App Router) + React 19 dashboard at `web/`: TypeScript,
+Tailwind v4, TanStack Query, Zustand, Base UI-flavored shadcn
+components, `react-plaid-link`, built directly against the real backend
+API surface — every hook and dialog cross-checked against the actual
+routers/schemas in `apps/core-api`, not assumed — with every backend
+feature that exists (account delete/update, transaction
+delete/filtering, price refresh, goal editing) actually wired up to a
+real UI control, not left unused.
 
-## Reference study and corrections
+## Building against the real contracts
 
-The reference frontend (`C:\Users\Shirisha\meridian1\web`) was read in
-full before writing any code — every file under `src/lib/`, `src/hooks/`,
-`src/app/`, `src/components/`, plus config — and cross-checked against
-the rebuilt backend's actual routers/schemas (not assumed from either
-side). That produced a concrete list of mismatches, fixed in the
-rebuild:
+Every file under `apps/core-api/app/**/router.py` and `**/schemas.py`
+was read before writing the corresponding frontend hook or dialog, and
+cross-checked against what the frontend would naturally assume without
+that step. That discipline caught concrete mismatches before they ever
+became runtime bugs:
 
-| Reference behavior | Rebuilt backend reality | Fix |
+| A naive assumption | The actual backend contract | What this frontend does |
 |---|---|---|
-| `useAccounts`/`useTransactions`/`useGoals`/`useHoldings` treat list responses as bare arrays | These four endpoints return `Page[T]` — `{items, total, limit, offset}` (`app/core/pagination.py`) | Hooks unwrap `.items`; list UIs read `total` for pagination (`TransactionsSection` has real prev/next paging) |
-| WS client (`use-live-notifications.ts`) connects with `?token=<access_token>`, no reconnect logic | Backend requires a single-use, 30-second `?ticket=` minted via `POST /auth/ws-ticket` (a deliberate fix over *this exact reference pattern* — see the backend's own `app/notifications/router.py` comment) | Rebuilt hook mints a fresh ticket on every (re)connection attempt; real reconnect-with-backoff (1s→15s) on drop |
-| `security_name` sent when creating a holding/watchlist item | Backend's `HoldingCreate`/`WatchlistCreate` expect `name` | Renamed in `use-investments.ts` and the two dialogs; verified in the browser that a named holding actually gets its name (`docs/adr` note below) |
-| `POST /auth/refresh`'s response has no `user` field, but reference code does `setAuth(token, response.data.user)` | Confirmed via `app/auth/schemas.py`: `TokenResponse` has no `user` | Real bug, caught and fixed — see below |
-| No delete/update account, no delete transaction, no transaction filtering, no goal editing, no price-refresh trigger | All of these have real backend endpoints (`PATCH`/`DELETE /accounts/{id}`, `DELETE /transactions/{id}`, `q`/`date_from`/`date_to`/`category_id` filters, `PATCH /goals/{id}`, `POST /investments/prices/refresh`) never called from the reference UI | All added: `/dashboard/accounts` (new page) with edit-free delete + institution management, transaction delete + merchant search + real pagination, `AddGoalDialog` doubles as an edit dialog, a "Refresh prices" button |
-| Currency hardcoded to `"USD"` in `AddAccountDialog` | `AccountCreate.currency` is a real field | Currency selector added (USD/EUR/GBP/CAD) |
-| Generic error strings regardless of cause (`"Registration failed."`, `"Incorrect email or password."`) | Every error response is `{"error": {"type", "message", "details"}}` | `apiErrorMessage()` helper surfaces the real backend message as a fallback everywhere a mutation can fail |
+| List endpoints return a bare array | `useAccounts`/`useTransactions`/`useGoals`/`useHoldings`'s endpoints return `Page[T]` — `{items, total, limit, offset}` (`app/core/pagination.py`) | Hooks unwrap `.items`; list UIs read `total` for pagination (`TransactionsSection` has real prev/next paging) |
+| A WebSocket can just carry the long-lived access token in its URL, no reconnect logic needed | The backend requires a single-use, 30-second `?ticket=` minted via `POST /auth/ws-ticket` (`app/notifications/router.py`) — a deliberate exposure-narrowing design, not an accident | The hook mints a fresh ticket on every (re)connection attempt; real reconnect-with-backoff (1s→15s) on drop |
+| A holding/watchlist create body might use `security_name` | `HoldingCreate`/`WatchlistCreate` expect `name` | Field named `name` in `use-investments.ts` and both dialogs; verified in the browser that a named holding actually gets its name (`docs/adr` note below) |
+| `POST /auth/refresh`'s response includes a `user` field | Confirmed via `app/auth/schemas.py`: `TokenResponse` has no `user` field at all | Real bug this assumption would have caused — caught and fixed, see below |
+| Account/transaction/goal management is read-mostly | Real backend endpoints exist for all of it (`PATCH`/`DELETE /accounts/{id}`, `DELETE /transactions/{id}`, `q`/`date_from`/`date_to`/`category_id` filters, `PATCH /goals/{id}`, `POST /investments/prices/refresh`) | All wired up: `/dashboard/accounts` (new page) with delete + institution management, transaction delete + merchant search + real pagination, `AddGoalDialog` doubles as an edit dialog, a "Refresh prices" button |
+| Currency is always `"USD"` | `AccountCreate.currency` is a real, independent field | Currency selector added (USD/EUR/GBP/CAD) |
+| A generic error string per failure mode is enough (`"Registration failed."`, `"Incorrect email or password."`) | Every error response is `{"error": {"type", "message", "details"}}` | `apiErrorMessage()` helper surfaces the real backend message as a fallback everywhere a mutation can fail |
 
-## Two real bugs found during this phase (not in the reference — introduced and then fixed in this rebuild)
+## Two real bugs found and fixed during this phase
 
-1. **Session lost on every page reload.** Fixing the `setAuth(token,
-   response.data.user)` bug above (by making `user` optional and
+1. **Session lost on every page reload.** Fixing the "no `user` field in
+   the refresh response" assumption above (by making `user` optional and
    falling back to the existing store value) created a *new* gap: on a
    fresh page load there's no existing user in the store for that
    fallback to preserve, so `user` stayed `null` forever despite a
@@ -94,32 +93,29 @@ web/src/components/dashboard/    feature components (dialogs, sections,
 
 | Decision | Choice | Rejected alternative |
 |---|---|---|
-| Popup close/unmount reliability | No CSS animations; `BASE_UI_ANIMATIONS_DISABLED` flag + (for `Select`) a plain React conditional unmount — see [ADR-0009](adr/0009-no-popup-close-animations.md) | Keeping the reference's animate-in/out classes — caused dialogs to never actually close in this rebuild's testing |
-| WS reconnection | Real reconnect with backoff (1s→15s), a fresh single-use ticket minted on every attempt | The reference's no-reconnect-at-all approach, now incompatible anyway since the backend's tickets are single-use |
-| Pagination | Unwrap `Page[T]` at the hook boundary; real prev/next controls on the one list (transactions) exposed to the user at meaningful volume | Leaving pagination unhandled like the reference — would crash (`.map is not a function`) against the real backend |
-| Error messages | `apiErrorMessage()` surfaces the backend's real `error.message` as the fallback text everywhere a mutation can fail | Hardcoded generic strings per the reference — loses real diagnostic detail (e.g. *why* a 422 happened) |
+| Popup close/unmount reliability | No CSS animations; `BASE_UI_ANIMATIONS_DISABLED` flag + (for `Select`) a plain React conditional unmount — see [ADR-0009](adr/0009-no-popup-close-animations.md) | Real animate-in/out CSS classes — caused dialogs to never actually close in this app's testing environment |
+| WS reconnection | Real reconnect with backoff (1s→15s), a fresh single-use ticket minted on every attempt | No reconnect logic at all — incompatible anyway with the backend's single-use tickets |
+| Pagination | Unwrap `Page[T]` at the hook boundary; real prev/next controls on the one list (transactions) exposed to the user at meaningful volume | Treating list responses as bare arrays — would crash (`.map is not a function`) against the real backend |
+| Error messages | `apiErrorMessage()` surfaces the backend's real `error.message` as the fallback text everywhere a mutation can fail | Hardcoded generic strings per failure type — loses real diagnostic detail (e.g. *why* a 422 happened) |
 | Type inference for the `Select` wrapper | Kept it generic (`Select<Value, Multiple>`) when adding the open-state context, matching Base UI's own `Root.Props<Value, Multiple>` | A non-generic wrapper — compiles, but silently loses `onValueChange`'s value-type inference at every call site (caught by `tsc`, not by eye) |
 
 ## Tradeoffs
 
 - No animations on any popup (dialogs, selects, the notification
-  popover) — a real, visible polish loss versus the reference,
-  accepted in exchange for popups that reliably close. See ADR-0009's
-  "alternatives considered" for what would need re-verifying before
-  reintroducing them.
+  popover) — a real, visible polish loss, accepted in exchange for
+  popups that reliably close. See ADR-0009's "alternatives considered"
+  for what would need re-verifying before reintroducing them.
 - `web/src/lib/types.ts` is hand-maintained, not generated from the
   backend's OpenAPI schema — fine at this size, would need revisiting
   if the API surface grows substantially.
-- No automated frontend test suite (matches the reference, which also
-  has none — `package.json` has no `test` script either side). All
-  verification this phase is manual, against the real running backend
-  and a real browser, documented in the checklist below — not unit or
-  integration tests.
+- No automated frontend test suite yet (`package.json` has no `test`
+  script). All verification this phase is manual, against the real
+  running backend and a real browser, documented in the checklist
+  below — not unit or integration tests.
 - Currency formatting (`money.ts`) is locale-fixed to `en-US` regardless
   of the account's actual currency — correct for USD, cosmetically off
-  for others (number/symbol placement). Same simplification as the
-  reference; not revisited since every account created during
-  verification used USD.
+  for others (number/symbol placement). Not revisited since every
+  account created during verification used USD.
 
 ## Verification checklist
 

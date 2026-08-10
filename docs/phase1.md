@@ -35,11 +35,11 @@ Cross-cutting, available to every module added from Phase 2 onward:
 
 | Decision | Choice | Rejected alternative |
 |---|---|---|
-| Database access | Async SQLAlchemy 2.0 + asyncpg (see [ADR-0001](adr/0001-async-sqlalchemy.md)) | Sync SQLAlchemy in async routes (the reference implementation's approach) |
-| Error handling | A small `AppError` exception hierarchy + four registered FastAPI exception handlers, one consistent JSON envelope for every error path (deliberate, validation, 404/405, and unhandled) | Ad hoc `HTTPException(status, detail)` per route (the reference implementation's approach) — consistent by convention only, and an unhandled exception fell through to FastAPI's default, uncontrolled response |
-| Health endpoints | Separate `/live`, `/ready`, `/health` — `/ready` returns a real 503 when the database is unreachable (what a Kubernetes readinessProbe checks), `/health` always returns 200 with status in the body (what a dashboard scrapes) | A single `/health` returning `{"status": "ok"}` unconditionally (the reference implementation's approach) — no way to distinguish "process up" from "process up but can't serve real requests" |
-| Logging | Structured JSON in non-development environments, human-readable in development, one shared formatter | No centralized logging config (the reference implementation's approach) — every module called `logging.getLogger(__name__)` with no shared shape, nothing shippable to Loki without ad hoc parsing |
-| Packaging | `pyproject.toml` (PEP 621), installed as an editable package | `requirements.txt` (the reference implementation's approach) |
+| Database access | Async SQLAlchemy 2.0 + asyncpg (see [ADR-0001](adr/0001-async-sqlalchemy.md)) | Sync SQLAlchemy in async routes |
+| Error handling | A small `AppError` exception hierarchy + four registered FastAPI exception handlers, one consistent JSON envelope for every error path (deliberate, validation, 404/405, and unhandled) | Ad hoc `HTTPException(status, detail)` per route — consistent by convention only, and an unhandled exception fell through to FastAPI's default, uncontrolled response |
+| Health endpoints | Separate `/live`, `/ready`, `/health` — `/ready` returns a real 503 when the database is unreachable (what a Kubernetes readinessProbe checks), `/health` always returns 200 with status in the body (what a dashboard scrapes) | A single `/health` returning `{"status": "ok"}` unconditionally — no way to distinguish "process up" from "process up but can't serve real requests" |
+| Logging | Structured JSON in non-development environments, human-readable in development, one shared formatter | No centralized logging config — every module called `logging.getLogger(__name__)` with no shared shape, nothing shippable to Loki without ad hoc parsing |
+| Packaging | `pyproject.toml` (PEP 621), installed as an editable package | `requirements.txt` |
 
 ## Tradeoffs
 

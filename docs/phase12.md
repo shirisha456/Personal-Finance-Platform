@@ -6,53 +6,50 @@ Distributed tracing (OpenTelemetry → Tempo), metrics (Prometheus,
 scraped from every service), and structured logs (Loki, via Promtail) —
 wired so the four-service event pipeline built across Phases 7–9 is
 actually *visible* as one connected system, not four services whose
-logs a human correlates by hand. Studied against the reference
-implementation's own observability stack
-(`C:\Users\Shirisha\meridian1\observability\`) and its OTel wiring in
-`apps/core-api` and each worker, then rebuilt with the specific gaps
-that research surfaced fixed.
+logs a human correlates by hand.
 
-## Gaps in the reference, fixed in this rebuild
+## What full observability actually requires here
 
-1. **Trace-log correlation didn't actually work.** The reference wired a
-   Tempo→Loki `tracesToLogsV2` datasource link in Grafana, but no
-   service ever put a `trace_id` into a log line (plain
-   `logging.basicConfig` text format, no OTel logging integration
-   anywhere) — the link had nothing to filter on. This rebuild's
-   `configure_logging()` (one per service — `apps/core-api/app/core/logging.py`
-   and each worker's `app/logging_config.py`) emits structured JSON with
-   a `TraceContextFilter` that injects `trace_id`/`span_id` onto every
-   log record while a span is active, and Promtail's pipeline
+1. **Trace-log correlation has to be built deliberately, not assumed
+   from the Grafana wiring alone.** Wiring a Tempo→Loki `tracesToLogsV2`
+   datasource link in Grafana is the easy, visible part — it's useless
+   unless something actually puts a `trace_id` into a log line for that
+   link to filter on. `configure_logging()` (one per service —
+   `apps/core-api/app/core/logging.py` and each worker's
+   `app/logging_config.py`) emits structured JSON with a
+   `TraceContextFilter` that injects `trace_id`/`span_id` onto every log
+   record while a span is active, and Promtail's pipeline
    (`observability/promtail/promtail-config.yml`) parses that JSON and
    attaches `trace_id`/`span_id` as Loki *structured metadata* (not
    labels — see the tradeoffs section on why). **Verified working**, not
    assumed — see the checklist below.
-2. **No SQLAlchemy instrumentation on `enrichment-service`/`anomaly-service`**,
-   despite both using it for DB access, even though `core-api` had it.
-   Both now call `SQLAlchemyInstrumentor().instrument(engine=...)` in
-   their own `app/tracing.py`, same as core-api.
-3. **`notification-service` had no tracing at all** — no OTel packages,
-   no `OTEL_EXPORTER_OTLP_ENDPOINT`. It's the terminal hop of the
-   pipeline (Kafka → Redis Pub/Sub, nothing published onward), so it
-   doesn't need the SQLAlchemy or outbound-propagation pieces the other
-   two have, but it now extracts and continues the incoming trace
-   (`continue_trace` in `services/notification-service/app/tracing.py`)
-   so the trace doesn't dead-end one hop early.
-4. **No `/health` on any of the four workers** was already fixed before
-   this phase (Phase 9's `app/health.py`, a stdlib `http.server`). This
-   phase extends that *same* server to also serve `/metrics`
-   (`prometheus_client.generate_latest()`) — one port doing both jobs,
-   rather than the reference's two separate mechanisms (a bare
+2. **SQLAlchemy instrumentation on every service that touches the
+   database**, not just `core-api` — `enrichment-service` and
+   `anomaly-service` both call `SQLAlchemyInstrumentor().instrument(engine=...)`
+   in their own `app/tracing.py`, same as core-api, so their DB spans
+   show up in the same trace.
+3. **`notification-service` gets tracing too, even as the pipeline's
+   terminal hop.** It's Kafka → Redis Pub/Sub, nothing published onward,
+   so it doesn't need the SQLAlchemy or outbound-propagation pieces the
+   other two have — but it still extracts and continues the incoming
+   trace (`continue_trace` in
+   `services/notification-service/app/tracing.py`) so the trace doesn't
+   dead-end one hop early.
+4. **One port per worker serves both `/health` and `/metrics`.**
+   Phase 9's `app/health.py` (a stdlib `http.server`) already covered
+   `/health`; this phase extends that *same* server to also serve
+   `/metrics` (`prometheus_client.generate_latest()`) — one port doing
+   both jobs, rather than two separate mechanisms (a bare
    `prometheus_client.start_http_server` on its own port, with no health
-   endpoint at all next to it).
-5. **No panels for `anomaly-service`'s or `notification-service`'s own
-   counters** in the reference's Grafana dashboard, despite both being
-   collected. Both get real panels now
-   (`observability/grafana/dashboards/meridian-overview.json`).
-6. **Outbound third-party calls (OpenAI, Plaid) were untraced.** Both go
-   through `httpx` (`core-api`'s Plaid client is hand-written on top of
-   it — see ADR-0007 — and the OpenAI SDK uses `httpx` internally), so
-   `HTTPXClientInstrumentor().instrument()` in `core-api`'s
+   endpoint alongside it).
+5. **Every service's own counters get a real dashboard panel.**
+   `anomaly-service`'s and `notification-service`'s metrics are
+   collected regardless, but need actual panels to be visible — both
+   get them now (`observability/grafana/dashboards/meridian-overview.json`).
+6. **Outbound third-party calls (OpenAI, Plaid) are traced too.** Both
+   go through `httpx` (`core-api`'s Plaid client is hand-written on top
+   of it — see ADR-0007 — and the OpenAI SDK uses `httpx` internally),
+   so `HTTPXClientInstrumentor().instrument()` in `core-api`'s
    `app/core/tracing.py` covers both for free, without a manual span
    around either call site.
 
@@ -101,9 +98,9 @@ observability/
 | Decision | Choice | Rejected alternative |
 |---|---|---|
 | Collector or no | No OTel Collector — every service exports OTLP directly to Tempo | See [ADR-0010](adr/0010-direct-otlp-export-no-collector.md) |
-| Trace-log correlation | `trace_id`/`span_id` injected into structured JSON logs via a logging Filter reading the active OTel span, parsed back out by Promtail into Loki structured metadata | The reference's approach: wire the Grafana datasource link and never actually put a trace_id in a log line — a link with nothing to correlate |
+| Trace-log correlation | `trace_id`/`span_id` injected into structured JSON logs via a logging Filter reading the active OTel span, parsed back out by Promtail into Loki structured metadata | Wiring only the Grafana datasource link, with no trace_id ever landing in a log line — a link with nothing to actually correlate |
 | `trace_id`/`span_id` as Loki labels vs. structured metadata | Structured metadata | Labels — a Loki label is an index dimension; trace_id has one distinct value per request, which would blow up cardinality. `level` (a handful of distinct values) is promoted to a label instead; trace_id/span_id use Loki 3.x's structured metadata, filterable via `\| trace_id="..."` without being indexed |
-| Health + metrics endpoint | One `http.server` per worker serving both `/health` and `/metrics` | The reference's two separate mechanisms (bare `prometheus_client.start_http_server`, no health endpoint alongside it) |
+| Health + metrics endpoint | One `http.server` per worker serving both `/health` and `/metrics` | Two separate mechanisms — a bare `prometheus_client.start_http_server` with no health endpoint alongside it |
 | JSON logs: when | Whenever stdout isn't a TTY (`sys.stdout.isatty()`), not keyed off `environment == "development"` alone | `environment`-only — `docker compose up` also runs with `ENVIRONMENT=development`, but its stdout is captured by the Docker daemon for Promtail, not read by a human directly, and needs the structured form regardless |
 | Trace propagation across Kafka | Capture the W3C traceparent at outbox-*write* time (while the original request's span is still active), store it on the outbox row, inject it as Kafka message headers at *publish* time | Injecting "current" context at publish time — the background outbox publisher loop runs on its own 3-second schedule with no request span active by then; there'd be nothing real to inject |
 
@@ -112,22 +109,21 @@ observability/
 - No OTel Collector (see ADR-0010) — no tail sampling, no PII scrubbing
   layer, no multi-backend fan-out. Not needed at this scale; revisit if
   any of those become real requirements.
-- No alerting rules (Prometheus `rule_files`/Alertmanager) — matches the
-  reference; this phase is observability *visibility*, not on-call
-  paging.
+- No alerting rules (Prometheus `rule_files`/Alertmanager) — this phase
+  is observability *visibility*, not on-call paging.
 - Grafana runs with anonymous Admin access
   (`GF_AUTH_ANONYMOUS_ENABLED=true`) — acceptable for a local-only
   Compose stack, explicitly not a setting to carry into anything shared
   or internet-reachable.
 - Log retention is 7 days (Loki compactor) and traces 24 hours (Tempo
   compactor) — local-dev-appropriate defaults, not a durability
-  guarantee, matching the reference.
+  guarantee.
 - Metrics use `prometheus_client` directly (Counters/Gauges), not the
   OTel Metrics SDK — traces go through OpenTelemetry, metrics through
-  Prometheus's own client library. A deliberate hybrid (matches the
-  reference), not a gap: OTel's metrics API would ultimately export to
-  the same Prometheus scrape-based model via an exporter, so this skips
-  a layer without losing anything at this scale.
+  Prometheus's own client library. A deliberate hybrid, not a gap:
+  OTel's metrics API would ultimately export to the same Prometheus
+  scrape-based model via an exporter, so this skips a layer without
+  losing anything at this scale.
 
 ## Verification checklist
 
@@ -168,13 +164,14 @@ observability/
       thing this phase had to get right and it's confirmed working with
       real trace data, not asserted from reading the code.
 - [x] **Trace-log correlation, real data**: queried Loki (via Grafana's
-      datasource proxy, since Loki has no host-published port — same as
-      the reference) for `{service=~".+"} | trace_id="<the trace ID
-      above>"` and got back the actual log lines from `core-api`
+      datasource proxy, since Loki has no host-published port) for
+      `{service=~".+"} | trace_id="<the trace ID above>"` and got back
+      the actual log lines from `core-api`
       (`"POST /api/v1/transactions HTTP/1.1" 201`) and `anomaly-service`
       (`"Raised 1 alert(s) from offset 1."`), both correctly tagged with
-      that exact trace_id as structured metadata. The reference's
-      equivalent Grafana link had nothing to correlate; this one does.
+      that exact trace_id as structured metadata — confirming the
+      Grafana trace-to-logs link has real data to correlate against, not
+      just a wired-up UI element.
 - [x] **Grafana dashboard**: fetched via
       `GET /api/dashboards/uid/meridian-overview` and confirmed all 9
       panels are provisioned; queried three of the custom PromQL metrics

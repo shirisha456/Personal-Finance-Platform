@@ -88,9 +88,8 @@ was chosen (from real measurements, not a guess).
   actually run.
 - **Claim it was tested via `terraform plan` against real credentials
   temporarily** — not done; this project was never given AWS credentials
-  to test with, and claiming otherwise would violate this rebuild's own
-  standing rule to never claim something works when it hasn't actually
-  been run.
+  to test with, and claiming otherwise would violate its own standing
+  rule to never claim something works when it hasn't actually been run.
 
 ## Consequences
 

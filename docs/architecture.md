@@ -137,8 +137,9 @@ The idempotency guarantee that makes this safe under Kafka's
 at-least-once delivery: `alerts` has a real `UNIQUE(source_event_id,
 alert_type)` constraint, so a redelivered `transactions.enriched`
 message re-evaluates the same rules and finds the alert already exists
-rather than duplicating it (the exact bug the reference implementation
-had despite its own ADR claiming otherwise — see `docs/phase9.md`).
+rather than duplicating it (an earlier version of this was missing that
+constraint despite the ADR claiming idempotency — see `docs/phase9.md`
+for how that was caught).
 
 ## Auth: access tokens, rotating refresh, and WS tickets
 
@@ -196,9 +197,9 @@ flowchart LR
 
 The trace-to-logs link is genuinely functional — verified with real
 data pulled from both Tempo's and Loki's own APIs during Phase 12, not
-assumed from the config alone (the reference wired the same Grafana
-link with no log line anywhere carrying a `trace_id`, so it had nothing
-to actually correlate).
+assumed from the config alone. Wiring the Grafana link alone isn't
+enough on its own: without every log line carrying a `trace_id`, the
+link has nothing to actually correlate against.
 
 ## Deployment topologies
 

@@ -8,10 +8,10 @@ environment, and a `single-ec2` environment that's the one path meant
 to actually be applied), Helm charts for the EKS path, a production
 `docker-compose.prod.yml` + nginx + backup/restore scripts for the
 single-EC2 path, and a new CI job that statically validates all of it.
-Studied against the reference implementation's own `infra/`, `deploy/`,
-and (lack of) infra CI, then rebuilt for this project's actual 3-worker
-topology (the reference has a 4th service, `market-data-service`, which
-this rebuild never built and so doesn't appear anywhere here).
+Scoped to this project's 3-worker topology as it stood at this phase
+(`market-data-service` was added later, as a standalone poller — see
+the README's "Post-phase-15 additions" and
+[ADR-0014](adr/0014-market-data-service-no-kafka-topic.md)).
 
 The single most important thing to get right in this phase wasn't a
 design decision — it was being explicit about what "written" means
@@ -39,26 +39,23 @@ deploy/
 
 | Decision | Choice | Rejected alternative |
 |---|---|---|
-| Applied vs. validated | Written and validated (`terraform validate`, `terraform fmt`, `helm lint`, `helm template`) — never `apply`'d or `install`'d against real AWS/Kubernetes | Claiming deployment success without ever running it — would violate this rebuild's own standing honesty rule; see [ADR-0011](adr/0011-terraform-written-not-applied.md) |
+| Applied vs. validated | Written and validated (`terraform validate`, `terraform fmt`, `helm lint`, `helm template`) — never `apply`'d or `install`'d against real AWS/Kubernetes | Claiming deployment success without ever running it — would violate this project's own standing honesty rule; see [ADR-0011](adr/0011-terraform-written-not-applied.md) |
 | Two Terraform environments | `dev` (EKS, IRSA, managed RDS/ElastiCache — the "how a real team would run this" design) *and* `single-ec2` (one box, SSM-only access, no VPC of its own — the one actually meant to run) | Just one — either loses the genuine Kubernetes-shaped design work, or loses the environment that's actually runnable for a real portfolio deployment |
 | Single-EC2 instance size | `t3.large`, chosen from real `docker stats` measurements of this project's own dev stack plus a deliberately-limits-not-idle-based sizing methodology | Guessing a size, or copying a number from elsewhere without re-measuring this project's actual footprint — see [ADR-0012](adr/0012-single-ec2-instance-sizing.md) |
 | KEDA autoscaling for enrichment/anomaly, fixed replicas for notification | KEDA's Kafka-lag scaler for the two services with a clean one-topic-per-consumer-group shape; fixed `replicaCount: 2` for notification-service, which consumes two topics under one consumer group (doesn't map onto KEDA's single-trigger-per-topic Kafka scaler cleanly) and fans out to Redis Pub/Sub rather than a downstream topic other services would scale against | CPU-based HPA for the workers — rejected because an I/O-bound consumer waiting on Postgres/OpenAI can have near-zero CPU with a large Kafka backlog; CPU utilization doesn't reflect the actual bottleneck for this shape of service |
-| core-api health probes in Helm | `livenessProbe` → `/live`, `readinessProbe` → `/ready` (this project's own real liveness/readiness split, built in an earlier phase) | The reference's approach: both probes hit the same `/health` endpoint — this rebuild has a real `/live` vs `/ready` distinction to use instead |
-| Worker health+metrics | One `httpPort` serving both `/health` and `/metrics` per worker (matches this project's actual `app/health.py` design from Phase 12) | The reference's two-mechanisms approach (a metrics-only port, no health endpoint) |
-| CI infra validation | Added: a new `infra-validate` job runs `terraform fmt -check`, `terraform validate` (every module, both envs), `helm lint` (both charts, all three worker values files), and `helm template` (confirms every chart actually renders) on every push/PR | The reference has **no infra CI at all** — this is a genuine addition, not a reproduction |
+| core-api health probes in Helm | `livenessProbe` → `/live`, `readinessProbe` → `/ready` (this project's own real liveness/readiness split, built in an earlier phase) | Both probes hitting the same `/health` endpoint — loses the distinction between "process alive" and "process actually ready to serve real traffic" |
+| Worker health+metrics | One `httpPort` serving both `/health` and `/metrics` per worker (matches this project's actual `app/health.py` design from Phase 12) | Two separate mechanisms — a metrics-only port, no health endpoint alongside it |
+| CI infra validation | Added: a new `infra-validate` job runs `terraform fmt -check`, `terraform validate` (every module, both envs), `helm lint` (both charts, all three worker values files), and `helm template` (confirms every chart actually renders) on every push/PR | No infra CI at all — a real gap this closes |
 
-## Real gaps this phase fixed vs. the reference
+## Why infra CI matters here
 
-The reference's `infra/`/`deploy/` content itself was well-designed —
-this rebuild mostly reproduces its architecture faithfully, adapted to
-3 workers instead of 4. The one real, structural gap: **no CI validated
-any of it.** A `terraform.tfvars` typo, a Helm template syntax error, or
-a values file drifting out of sync with the chart's schema could sit
-undetected indefinitely in the reference. This rebuild's `infra-validate`
-CI job catches exactly that class of bug on every push — the same kind
-of "verify, don't just write and assume" discipline this whole rebuild
-has applied to application code, now applied to the infrastructure code
-too.
+Terraform and Helm content can be well-designed and still silently rot:
+a `terraform.tfvars` typo, a Helm template syntax error, or a values
+file drifting out of sync with the chart's schema can sit undetected
+indefinitely with nothing catching it. This phase's `infra-validate` CI
+job catches exactly that class of bug on every push — the same
+"verify, don't just write and assume" discipline this project applies
+to application code, now applied to the infrastructure code too.
 
 ## Tradeoffs
 

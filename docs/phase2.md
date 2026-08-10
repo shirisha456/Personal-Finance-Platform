@@ -30,12 +30,12 @@ Client
 
 | Decision | Choice | Rejected alternative |
 |---|---|---|
-| Password hashing | Argon2id, explicit OWASP-cited parameters (`time_cost=2, memory_cost=19456, parallelism=1`) | argon2-cffi's own library defaults (the reference implementation's approach) — works, but the cost isn't a deliberate choice tied to this app's threat model, just whatever the installed version defaults to |
-| Refresh tokens | Opaque `secrets.token_urlsafe(48)`, only the SHA-256 hash persisted, rotating with family-based reuse detection (kept from the reference implementation — this part of its design was already sound) | A refresh JWT — would let a client construct a "valid-looking" refresh token without a DB round trip, which is exactly what rotation/reuse-detection needs to prevent |
-| `users` schema | `password_hash` required (`NOT NULL`), no `google_sub` column | Carrying forward the reference implementation's nullable `password_hash` + unique `google_sub` — schema scaffolding for Google OAuth that was never actually implemented anywhere in that codebase. Dropped as speculative/dead scope; add it back in a real phase if OAuth is ever in scope |
-| Production boot safety | `Settings.assert_safe_for_environment()` refuses to start with the placeholder `JWT_SECRET` when `ENVIRONMENT=production` | No check (the reference implementation's approach) — shipped a real, guessable default with nothing stopping a misconfigured deploy from using it |
+| Password hashing | Argon2id, explicit OWASP-cited parameters (`time_cost=2, memory_cost=19456, parallelism=1`) | argon2-cffi's own library defaults — works, but the cost isn't a deliberate choice tied to this app's threat model, just whatever the installed version defaults to |
+| Refresh tokens | Opaque `secrets.token_urlsafe(48)`, only the SHA-256 hash persisted, rotating with family-based reuse detection | A refresh JWT — would let a client construct a "valid-looking" refresh token without a DB round trip, which is exactly what rotation/reuse-detection needs to prevent |
+| `users` schema | `password_hash` required (`NOT NULL`), no `google_sub` column | Nullable `password_hash` + a unique `google_sub` column — speculative schema scaffolding for Google OAuth that isn't actually implemented anywhere. Dropped as dead scope; add it back in a real phase if OAuth is ever in scope |
+| Production boot safety | `Settings.assert_safe_for_environment()` refuses to start with the placeholder `JWT_SECRET` when `ENVIRONMENT=production` | No check — shipped a real, guessable default with nothing stopping a misconfigured deploy from using it |
 | Error responses | `ConflictError` / `UnauthorizedError` (from Phase 1's `AppError` hierarchy) for duplicate email and bad credentials; same message for "no such user" and "wrong password" | Distinct messages per failure reason — would let a client enumerate which emails have accounts |
-| Password minimum | 8 characters via Pydantic `Field(min_length=8)` | No minimum (the reference implementation's approach) |
+| Password minimum | 8 characters via Pydantic `Field(min_length=8)` | No minimum |
 
 ## Tradeoffs
 

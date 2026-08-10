@@ -8,18 +8,18 @@ WebSocket endpoint, so a detected anomaly reaches the browser live,
 without a page refresh — verified end-to-end against real infrastructure,
 not simulated.
 
-## The bug this phase exists to fix
+## The idempotency guarantee this phase actually proves
 
-The reference implementation's `anomaly-service` was **not actually
-idempotent**, despite its own architecture decision record claiming
-"every consumer is idempotent on transaction_id." It inserted a fresh
-`uuid4()` alert row on every call with no uniqueness check — a
-redelivered `transactions.enriched` message (a real possibility under
-the outbox's at-least-once delivery, per ADR-0005) created a genuine
-duplicate alert every time. This was the single most important
-correctness gap flagged in this rebuild's initial inspection.
+It's easy to *claim* a consumer is idempotent in an ADR without the code
+actually holding that guarantee. Inserting a fresh `uuid4()` alert row
+on every call with no uniqueness check would mean a redelivered
+`transactions.enriched` message (a real possibility under the outbox's
+at-least-once delivery, per ADR-0005) creates a genuine duplicate alert
+every time. Idempotency has to be provably true, not just documented as
+true — that's the property this phase is built to guarantee from the
+start, with a test that proves it, not just a comment claiming it.
 
-The fix: `alerts.source_event_id` (the `TransactionEnriched` event's
+The guarantee: `alerts.source_event_id` (the `TransactionEnriched` event's
 `event_id` — ADR-0004 built this in specifically for this purpose),
 constrained `UNIQUE (source_event_id, alert_type)`. A redelivered event
 re-evaluates the same rules, finds the alert already exists, and skips
@@ -44,8 +44,8 @@ transactions.enriched
 
 alerts.raised, insights.generated
   → notification-service/app/consumer.py: Topics → notification "type"
-    mapping (imports Topics, doesn't hardcode strings — the reference
-    implementation's notification-service did, a drift risk fixed here)
+    mapping (imports Topics, doesn't hardcode topic-name strings — that
+    would be a real drift risk against `libs/events`)
   → Redis PUBLISH to notifications:{user_id}
 
 core-api:
@@ -62,9 +62,9 @@ core-api:
 
 | Decision | Choice | Rejected alternative |
 |---|---|---|
-| Anomaly idempotency | `UNIQUE (source_event_id, alert_type)` backed by the real `event_id` from ADR-0004 | The reference implementation's approach: nothing. This is the headline fix of this phase. |
-| `related_transaction_id` | A real foreign key to `transactions.id` (`ON DELETE SET NULL`) | The reference implementation's bare `Uuid` column with no referential integrity |
-| WebSocket auth | A 30-second, single-use ticket issued by an authenticated `POST /auth/ws-ticket`, not the long-lived access token, in the WS URL | The reference implementation's `?token=<access_token>` — browsers can't set custom WS headers, so *something* goes in the URL, but a long-lived bearer token there is a real log/proxy-history exposure a short-lived single-use ticket meaningfully narrows |
+| Anomaly idempotency | `UNIQUE (source_event_id, alert_type)` backed by the real `event_id` from ADR-0004 | No uniqueness check at all — the headline correctness property this phase is built to guarantee |
+| `related_transaction_id` | A real foreign key to `transactions.id` (`ON DELETE SET NULL`) | A bare `Uuid` column with no referential integrity |
+| WebSocket auth | A 30-second, single-use ticket issued by an authenticated `POST /auth/ws-ticket`, not the long-lived access token, in the WS URL | Putting the long-lived access token directly in the WS URL (`?token=<access_token>`) — browsers can't set custom WS headers, so *something* goes in the URL, but a long-lived bearer token there is a real log/proxy-history exposure a short-lived single-use ticket meaningfully narrows |
 | `alerts` table ownership | `core-api` owns and migrates it; `anomaly-service` writes to it via the same minimal-column-subset pattern as `enrichment-service` reading `transactions` (ADR-0007) | A separate alerts-service with its own database — more infrastructure than 3 rule types justify |
 | No `POST /alerts` in core-api | Deliberate — alerts are only ever created by `anomaly-service`'s direct DB write | Adding a create endpoint "for completeness" — would be dead code nothing calls, and a route that bypasses the actual detection logic if anyone did call it |
 

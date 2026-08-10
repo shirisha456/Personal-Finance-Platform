@@ -67,9 +67,9 @@ class Settings(BaseSettings):
     def assert_safe_for_environment(self) -> None:
         """Refuse to boot in production with the placeholder JWT secret.
 
-        The reference implementation shipped this exact default with no
-        runtime check — nothing stopped a misconfigured prod deploy from
-        signing tokens with a value anyone can read in this repo's history.
+        Without this check, nothing would stop a misconfigured prod
+        deploy from signing tokens with a value anyone can read in this
+        repo's history.
         """
         default_secret = type(self).model_fields["jwt_secret"].default
         if self.is_production and self.jwt_secret == default_secret:

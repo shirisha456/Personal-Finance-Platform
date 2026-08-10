@@ -8,8 +8,8 @@ from pydantic import BaseModel, Field
 class BaseEvent(BaseModel):
     """Every event contract inherits these three fields directly (no
     separate envelope-wraps-payload structure — simpler to produce and
-    to consume, and matches how the reference implementation's event
-    classes were shaped, just with real versioning and identity added).
+    to consume, with real versioning and identity built in from the
+    start).
 
     `event_id`: lets a consumer deduplicate a redelivered message by ID
     instead of re-deriving business-key uniqueness for every event type.

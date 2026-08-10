@@ -4,8 +4,8 @@
 
 Bank account linking via Plaid: link-token creation, public-token
 exchange, an encrypted access-token store, and cursor-based transaction
-sync — while fixing four real bugs the reference implementation had in
-this exact area (see Design decisions).
+sync — built to actually hold four correctness properties this kind of
+pagination/status-tracking integration needs (see Design decisions).
 
 ## Architecture
 
@@ -39,10 +39,10 @@ why this isn't the official `plaid-python` SDK.
 | Decision | Choice | Rejected alternative |
 |---|---|---|
 | Plaid client implementation | Direct REST calls via `httpx.AsyncClient`, fully async | The official `plaid-python` SDK — its generated client is synchronous (blocking `urllib3`), which would silently violate ADR-0001's async-everywhere principle the moment a route called it directly |
-| `has_more` pagination | `sync_institution` loops until `has_more` is `False`, processing every page | The reference implementation only processed one page per sync call — a real, silent partial-sync bug on any institution with a large transaction backlog |
-| `plaid_institution_id` | Nullable, populated from what the client (Plaid Link's `onSuccess` metadata) actually sends; `None` if not provided | The reference implementation hardcoded the literal string `"unknown"` for every institution, always, even though the column existed to hold real data |
-| Sync failure handling | `institution.status` transitions to `error` on a `PlaidApiError`, and back to `active` on the next successful sync | The reference implementation never transitioned status away from `active`, despite the frontend having a status badge that implied it would |
-| Unlink | Calls Plaid's `/item/remove`, but the local revocation always succeeds even if that call fails (logged, not raised) | The reference implementation never called `/item/remove` at all — a "removed" institution stayed live on Plaid's side indefinitely |
+| `has_more` pagination | `sync_institution` loops until `has_more` is `False`, processing every page | Processing only one page per sync call — a real, silent partial-sync bug on any institution with a large transaction backlog |
+| `plaid_institution_id` | Nullable, populated from what the client (Plaid Link's `onSuccess` metadata) actually sends; `None` if not provided | Hardcoding the literal string `"unknown"` for every institution, always, even though the column exists to hold real data |
+| Sync failure handling | `institution.status` transitions to `error` on a `PlaidApiError`, and back to `active` on the next successful sync | Never transitioning status away from `active` — leaves a status badge in the UI implying live tracking that isn't actually happening |
+| Unlink | Calls Plaid's `/item/remove`, but the local revocation always succeeds even if that call fails (logged, not raised) | Never calling `/item/remove` at all — a "removed" institution would stay live on Plaid's side indefinitely |
 | Transaction dedupe | Reuses Phase 3's `UniqueConstraint(account_id, external_id)` — a DB-level guarantee, not a new mechanism | Nothing new needed here — this is the payoff of the Phase 3 decision to add the constraint proactively before Plaid sync existed to populate `external_id` |
 
 ## Bugs found and fixed while building this phase
@@ -78,9 +78,9 @@ re-upgrade), which nothing before this had done:
   transactional outbox (Phase 7) and the event pipeline are for.
 - Still no Plaid webhook receiver — sync is user-triggered
   (`POST /institutions/{id}/sync`) or happens once at link time, not
-  pushed by Plaid. This is an honest, documented gap, not silently
-  copied from the reference implementation without comment: a webhook
-  receiver is realistic future work, not attempted here because it needs
+  pushed by Plaid. This is an honest, documented gap, not something
+  silently deferred without comment: a webhook receiver is realistic
+  future work, not attempted here because it needs
   a publicly reachable endpoint this local-dev-first project doesn't have
   yet.
 

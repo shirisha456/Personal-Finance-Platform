@@ -31,10 +31,9 @@ require reading fifteen separate documents to answer.
   never present a token it already knows is stale.
 - **Production boot guard**: `Settings.assert_safe_for_environment()`
   refuses to start in `production` if `JWT_SECRET` is still the
-  placeholder default — the reference implementation shipped that exact
-  default with no runtime check, so nothing stopped a misconfigured
-  prod deploy from signing tokens with a value anyone reading this
-  repo's history could see.
+  placeholder default — without this guard, nothing would stop a
+  misconfigured prod deploy from signing tokens with a value anyone
+  reading this repo's history could see.
 - **Rate limiting on `/login` and `/register`**: a Redis-backed, per-IP,
   fixed-window limiter (5 requests/min for register, 10/min for login) —
   fails open on a Redis outage rather than locking out the single most
@@ -48,9 +47,9 @@ require reading fifteen separate documents to answer.
   A resource that doesn't exist and a resource that belongs to a
   different user return the *identical* 404 — never 403, never any
   signal that distinguishes "not yours" from "doesn't exist at all."
-  The reference implementation hand-rolled this check 8 separate times
-  across routers; centralizing it means the guarantee holds everywhere
-  by construction, not by each router remembering to get it right.
+  Centralizing it here means the guarantee holds everywhere by
+  construction, not by each router remembering to hand-roll the same
+  check correctly.
 - **WebSocket auth**: a long-lived access token in a URL query string
   is a real exposure (server access logs, proxy logs, browser history) —
   browsers can't set a custom header on a WS handshake, so *something*

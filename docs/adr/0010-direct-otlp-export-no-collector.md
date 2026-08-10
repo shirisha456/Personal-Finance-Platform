@@ -62,8 +62,7 @@ setting each service already has (empty by default — see each service's
   per-service export overhead becomes measurable.
 - Tempo's OTLP/http port (4318) is published to the host specifically so
   a service run outside Docker (e.g. `uvicorn --reload` directly) can
-  still export traces during development — matches the reference
-  implementation's own reasoning for that port mapping.
+  still export traces during development.
 
 ## Validation
 

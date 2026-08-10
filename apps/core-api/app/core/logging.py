@@ -13,10 +13,10 @@ _RESERVED_LOG_RECORD_ATTRS = frozenset(logging.LogRecord("", 0, "", 0, "", None,
 class TraceContextFilter(logging.Filter):
     """Injects trace_id/span_id into every log record when a span is
     currently active, so Loki log lines can be correlated with the Tempo
-    trace that produced them (the reference implementation wired up a
-    Tempo→Loki datasource link in Grafana with nothing to actually filter
-    on — no log line anywhere carried a trace_id — making that link
-    non-functional; see docs/adr/0010)."""
+    trace that produced them. Without this, the Tempo→Loki datasource
+    link in Grafana would have nothing to actually filter on — no log
+    line anywhere would carry a trace_id, making that link
+    non-functional; see docs/adr/0010."""
 
     def filter(self, record: logging.LogRecord) -> bool:
         span = trace.get_current_span()

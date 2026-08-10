@@ -74,11 +74,10 @@ async def test_process_message_raises_and_publishes_a_duplicate_charge_alert(ses
 
 
 async def test_reprocessing_the_same_event_does_not_create_a_duplicate_alert(session_factory):
-    """The actual idempotency guarantee this phase exists to fix: the
-    reference implementation's anomaly-service had no such protection —
-    a redelivered message created a second, distinct alert row every
-    time. This test proves the (event_id, alert_type) uniqueness check
-    actually prevents that."""
+    """The actual idempotency guarantee this service is built to hold:
+    without the (event_id, alert_type) uniqueness check, a redelivered
+    message would create a second, distinct alert row every time. This
+    test proves the constraint actually prevents that."""
     account_id = uuid4()
     async with session_factory() as session:
         await _insert_account(session, account_id, uuid4())

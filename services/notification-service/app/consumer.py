@@ -9,9 +9,9 @@ from app.metrics import forwarded_total
 logger = logging.getLogger(__name__)
 
 # Imports Topics rather than spelling out topic strings a second time —
-# the reference implementation hardcoded {"alerts.raised": "alert", ...}
-# directly, a duplication that could silently drift from libs/events if
-# a topic name ever changed there without this dict being updated too.
+# hardcoding {"alerts.raised": "alert", ...} directly would be a
+# duplication that could silently drift from libs/events if a topic
+# name ever changed there without this dict being updated too.
 TOPIC_TO_NOTIFICATION_TYPE = {
     Topics.ALERTS_RAISED: "alert",
     Topics.INSIGHTS_GENERATED: "insight",

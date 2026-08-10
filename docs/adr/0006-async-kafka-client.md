@@ -7,7 +7,7 @@ Accepted
 ## Context
 
 The outbox publisher needs to run periodically in the background and
-call out to Kafka. The reference implementation used
+call out to Kafka. A common approach is
 `confluent_kafka.Producer` (a synchronous C-extension client, fire-and-
 forget `produce()` + `poll(0)`, delivery confirmed via a callback) driven
 by APScheduler's `BackgroundScheduler`, which runs jobs on their own OS
@@ -27,16 +27,16 @@ scheduler library, no cross-thread database access.
 `producer.send_and_wait(topic, value, key)` is the key primitive this
 unlocks: it's a single awaitable that only returns once the broker has
 acknowledged the message (or raises on failure) — which is also what
-fixes the reference implementation's outbox bug (ADR-0005) where a row
-could be marked `published` before delivery was actually confirmed.
+closes the ordering bug ADR-0005 describes, where a row could be marked
+`published` before delivery was actually confirmed.
 `confluent-kafka`'s callback-based model makes that same guarantee
 possible too, but only with more bookkeeping (tracking a delivery
 future per in-flight message); `send_and_wait` gives it for free.
 
 ## Alternatives considered
 
-- **confluent-kafka + APScheduler** (the reference implementation's
-  approach) — rejected per Context: introduces either a second database
+- **confluent-kafka + APScheduler** — rejected per Context: introduces
+  either a second database
   connection story or genuine thread-safety risk with the existing async
   engine, for a library that's arguably harder to use correctly
   (explicit `poll()`/`flush()` calls, callback-based delivery
@@ -48,8 +48,8 @@ future per in-flight message); `send_and_wait` gives it for free.
 ## Consequences
 
 - `aiokafka` is a smaller, less corporately-backed project than
-  `confluent-kafka` (which wraps librdkafka, the reference
-  implementation used by most production Kafka tooling). Accepted as a
+  `confluent-kafka` (which wraps librdkafka, the C library most
+  production Kafka tooling is built on). Accepted as a
   reasonable tradeoff for a project of this scale, where async-engine
   compatibility and code simplicity matter more than
   librdkafka-specific performance tuning options this app doesn't need.

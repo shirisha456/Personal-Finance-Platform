@@ -28,17 +28,17 @@ GET /api/v1/accounts, /api/v1/transactions
 references it, so the table has to exist before transactions do, even
 though nothing populates it with real categorization until Phase 8
 (enrichment-service). It's seeded by the migration itself with the same
-fixed 11-category taxonomy the reference implementation used.
+fixed 11-category taxonomy used throughout this app.
 
 ## Design decisions
 
 | Decision | Choice | Rejected alternative |
 |---|---|---|
-| Ownership checks | One shared `app/core/ownership.py::get_owned` helper, used by every direct-`user_id` resource | Hand-rolled `_get_owned_*` per router (the reference implementation's approach) — functionally fine but duplicated 8× with no shared guarantee a new module gets it right |
-| Category seed data | `INSERT ... ON CONFLICT (name) DO NOTHING` with deterministic (`uuid5`) IDs | The reference implementation's `bulk_insert` of fresh `uuid4()` rows with no existence check — duplicates the taxonomy if the migration is ever re-run |
-| Plaid dedupe key | `UniqueConstraint(account_id, external_id)` added to the schema now, even though nothing populates `external_id` until Phase 6 | Waiting until Phase 6 to add the constraint, matching how the reference implementation's dedupe was app-level-only, non-atomic, and not actually account-scoped despite its own comment saying it was |
+| Ownership checks | One shared `app/core/ownership.py::get_owned` helper, used by every direct-`user_id` resource | Hand-rolled `_get_owned_*` per router — functionally fine but duplicated 8× with no shared guarantee a new module gets it right |
+| Category seed data | `INSERT ... ON CONFLICT (name) DO NOTHING` with deterministic (`uuid5`) IDs | A `bulk_insert` of fresh `uuid4()` rows with no existence check — duplicates the taxonomy if the migration is ever re-run |
+| Plaid dedupe key | `UniqueConstraint(account_id, external_id)` added to the schema now, even though nothing populates `external_id` until Phase 6 | Waiting until Phase 6 to add the constraint — leaves dedupe app-level-only and non-atomic in the meantime, with no DB-level guarantee it's actually account-scoped |
 | Redis introduction | Brought in this phase specifically for idempotency-key caching, fail-open (see [ADR-0002](adr/0002-fail-open-redis-dependencies.md)) | Deferring Redis to a later phase — but "Idempotency" is explicit Phase 3 scope, and idempotency-key caching is the natural first real use |
-| Pagination | Generic `Page[T]` (PEP 695 syntax) + `limit`/`offset`, capped at 100 | No pagination (the reference implementation's approach) — every list endpoint returned the full result set |
+| Pagination | Generic `Page[T]` (PEP 695 syntax) + `limit`/`offset`, capped at 100 | No pagination — every list endpoint returned the full result set |
 | Accounts schema | Manual-account fields only (`name`, `type`, `currency`, `current_balance_minor`) | Including `institution_id`/`plaid_account_id` now, nullable, with no `institutions` table yet to reference — Phase 6 adds those via its own migration once the table they'd point at actually exists |
 
 ## Tradeoffs
@@ -52,9 +52,9 @@ fixed 11-category taxonomy the reference implementation used.
   dependency injection (a fully generic `Depends`-based version isn't
   possible without either fixing the path param name globally or losing
   type safety) — an accepted middle ground, not full deduplication.
-- Transactions still have no `user_id` column, matching the reference
-  implementation's design — ownership is always derived by joining
-  through `accounts`. This is a deliberate normalization choice (an
+- Transactions still have no `user_id` column — ownership is always
+  derived by joining through `accounts`. This is a deliberate
+  normalization choice (an
   account's owner is the single source of truth for who owns its
   transactions), not an oversight.
 

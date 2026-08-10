@@ -38,8 +38,8 @@ and runs no migrations against it.
 |---|---|---|
 | OpenAI client | Official `openai` SDK's `AsyncOpenAI` | A hand-rolled REST client (the approach Phase 6 took for Plaid) — unnecessary here since OpenAI's SDK genuinely is async, unlike `plaid-python`; ADR-0001 has no conflict to route around |
 | Recurring-merchant detection | A simple count threshold (≥3rd occurrence of the same merchant name on the same account) | Nothing more sophisticated — this is a deliberately simple heuristic, not ML, and is documented as such; Phase 9's `anomaly-service` is the actual consumer of this signal and can evolve the definition later without touching this service |
-| Health check | A minimal stdlib `http.server` on `/health`, its own thread, wired into a Docker `HEALTHCHECK` | No healthcheck (the reference implementation had none for any of its four Python services — a gap I flagged in the original inspection) |
-| Poison messages | Caught, logged, offset committed anyway — no dead-letter topic | Building a DLQ now — real infrastructure this phase's scope doesn't justify yet; documented as an accepted, known gap (matching the reference implementation's own honest framing), not silently copied without comment |
+| Health check | A minimal stdlib `http.server` on `/health`, its own thread, wired into a Docker `HEALTHCHECK` | No healthcheck at all — leaves Docker/Kubernetes with no way to tell this process is actually alive |
+| Poison messages | Caught, logged, offset committed anyway — no dead-letter topic | Building a DLQ now — real infrastructure this phase's scope doesn't justify yet; documented as an accepted, known gap, not silently left unmentioned |
 
 ## Idempotency, concretely
 

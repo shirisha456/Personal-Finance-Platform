@@ -9,12 +9,11 @@ Accepted
 The core API is a FastAPI application, whose entire value proposition over
 a sync framework is that a single worker process can hold many requests
 in flight while each awaits I/O (database queries, external API calls).
-The reference implementation this project is rebuilt from used sync
-SQLAlchemy `Session` objects inside `async def` route handlers — every
-database call ran on FastAPI's default threadpool, which works, but
-silently caps concurrency at the threadpool size and means "async
-correctness" isn't actually true end-to-end, only at the HTTP-framing
-layer.
+A common but flawed approach is to use sync SQLAlchemy `Session` objects
+inside `async def` route handlers — every database call then runs on
+FastAPI's default threadpool, which works, but silently caps concurrency
+at the threadpool size and means "async correctness" isn't actually true
+end-to-end, only at the HTTP-framing layer.
 
 ## Decision
 
@@ -32,8 +31,8 @@ observable benefit in a single-writer, run-once-at-deploy-time script.
 
 ## Alternatives considered
 
-- **Sync SQLAlchemy in async routes** (the reference implementation's
-  approach) — simpler, more mature tooling/error messages, and
+- **Sync SQLAlchemy in async routes** — simpler, more mature
+  tooling/error messages, and
   perfectly adequate at prototype request volumes. Rejected because it
   doesn't hold up as the concurrency story a portfolio project should be
   able to defend under questioning, and it silently degrades (queueing on

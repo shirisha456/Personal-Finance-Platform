@@ -1,8 +1,8 @@
 # name: pinned explicitly (rather than left to default to the checkout
-# directory name) so this project's containers never collide with or get
-# treated as orphans of an unrelated "meridian"-named Compose project that
-# may already exist on a dev machine.
-name: meridian-rebuild
+# directory name, which can vary across clones/CI checkouts) so this
+# project's containers and volumes stay identifiable and consistent
+# regardless of what the checkout folder happens to be named.
+name: meridian
 
 services:
   postgres:
@@ -58,8 +58,7 @@ services:
   # NOTE: this list is hand-kept in sync with Topics.all() in
   # libs/events/meridian_events/topics.py — there's no way to import
   # Python into a shell command here, so a topic added there needs the
-  # same name added to this list by hand (the same tradeoff the
-  # reference implementation had at this exact boundary).
+  # same name added to this list by hand.
   redpanda-topics:
     image: redpandadata/redpanda:v24.2.7
     depends_on:

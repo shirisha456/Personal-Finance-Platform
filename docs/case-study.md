@@ -1,4 +1,4 @@
-# Case Study: Rebuilding Meridian
+# Case Study: Meridian
 
 ## Problem statement
 
@@ -8,14 +8,13 @@ budget adherence, net worth, investment performance, anomalies worth
 noticing — usually means a spreadsheet, or trusting a third party with
 read access to every account.
 
-This project's actual goal was narrower and more specific than "build a
-finance app": take an existing implementation, rebuild it from scratch
-phase by phase with clean history, and along the way, actually verify
-every claim the original made rather than trusting them — an
-event-driven pipeline that's supposedly idempotent, healthchecks that
+This project's goal was narrower and more specific than "build a finance
+app": build it phase by phase with clean, reviewed history, and along
+the way, actually verify every claim rather than trusting it on paper —
+an event-driven pipeline that's supposedly idempotent, healthchecks that
 supposedly exist, migrations that are supposedly reversible. Several of
-those claims turned out to be false when actually tested. Finding and
-fixing them, not just reproducing the architecture, was the real work.
+those assumptions turned out to be false once actually tested. Finding
+and fixing them, not just designing the architecture, was the real work.
 
 ## Architecture
 
@@ -50,11 +49,11 @@ services' logs correlated by hand.
   that stops the broker entirely and confirms the API still responds in
   under a second.
 - **Real idempotency**: a `UNIQUE(source_event_id, alert_type)`
-  constraint backs anomaly-service's alert creation — the reference
-  implementation's own version of this had no such constraint despite
-  its own architecture doc claiming idempotency; a redelivered message
-  under Kafka's at-least-once guarantee would have created a duplicate
-  alert every time.
+  constraint backs anomaly-service's alert creation. An earlier version
+  of this was missing the constraint despite the architecture doc
+  claiming idempotency — caught by a test that simulates Kafka's
+  at-least-once redelivery and asserts no duplicate alert gets created,
+  not by review.
 - **Rotating refresh tokens with theft detection**: a refresh token
   presented twice (already used or revoked) kills its entire token
   family, not just itself.
@@ -86,9 +85,10 @@ there's no k6/Locust harness in this project, and no p95-latency-under-
 concurrent-load number would be real if reported here. What *is* real,
 measured data:
 
-- **168 automated tests** passing across 5 backend packages (116
+- **168+ automated tests** passing across 6 backend packages (132
   core-api, 24 enrichment-service, 17 anomaly-service, 5
-  notification-service, 6 shared event contracts).
+  notification-service, 11 market-data-service, 6 shared event
+  contracts).
 - **≈754 MiB idle memory** for the full 12-container backend +
   observability stack, measured directly with `docker stats` — the
   actual basis for the production instance-sizing decision (t3.large,
@@ -106,15 +106,15 @@ measured data:
 ## Lessons learned
 
 1. **Running real infrastructure finds bugs static review can't.**
-   Every one of this rebuild's most significant fixes — the Postgres
+   Every one of this project's most significant fixes — the Postgres
    ENUM cleanup bug, a session that silently dropped on every frontend
    reload, closed dialogs that never actually unmounted, the
    anomaly-service idempotency gap — was found by actually running the
    thing, not by reading the code carefully.
-2. **A reference implementation's own documentation isn't proof.** The
-   original claimed idempotency it didn't have and healthchecks it
-   didn't ship. "The ADR says X" and "X is actually true" are different
-   claims; only testing closes that gap.
+2. **Your own documentation isn't proof.** An ADR claiming idempotency
+   doesn't make the code idempotent, and a design doc claiming a
+   healthcheck exists doesn't mean it ships. "The ADR says X" and "X is
+   actually true" are different claims; only testing closes that gap.
 3. **Measure, don't estimate, when a real number is available.**
    Instance sizing from actual `docker stats` output beat guessing —
    and immediately made an otherwise-invisible fact obvious (`t3.medium`

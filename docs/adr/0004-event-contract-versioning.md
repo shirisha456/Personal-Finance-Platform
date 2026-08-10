@@ -10,10 +10,9 @@ Event contracts change over time — a field gets added, a type
 narrows, a new required field appears. A consumer running old code and
 a producer running new code will coexist during any rolling deploy.
 Something has to let a consumer know which shape of a message it's
-looking at. The reference implementation had no versioning mechanism at
-all: no `version` field on any event class, no version in any topic
-name — a consumer had no way to detect a schema change short of a
-runtime validation failure.
+looking at. Without a versioning mechanism — no `version` field on any
+event class, no version in any topic name — a consumer has no way to
+detect a schema change short of a runtime validation failure.
 
 ## Decision
 
@@ -31,8 +30,8 @@ consumer-side deduplication. Topic names stay stable
   that doesn't affect partitioning or ordering guarantees, that's a lot
   of infrastructure churn for what a version field in the message body
   handles more cheaply.
-- **No versioning** (the reference implementation's approach) — rejected
-  outright; a consumer has no way to tell "this field is missing because
+- **No versioning at all** — rejected outright; a consumer has no way
+  to tell "this field is missing because
   the event predates it" from "this field is missing because something
   is broken."
 
@@ -47,9 +46,9 @@ consumer-side deduplication. Topic names stay stable
   (Pydantic simply ignores unknown fields by default and treats missing
   optional fields as their default) — bumping `version` is for changes
   an old consumer would actually misinterpret, not every schema edit.
-- `event_id` existing now is what makes it possible to actually fix the
-  reference implementation's non-idempotent anomaly-service in this
-  rebuild's Phase 9, rather than repeating that bug.
+- `event_id` existing now is what makes anomaly-service's idempotency
+  guarantee (Phase 9) possible at all — deduplicating a redelivered
+  message needs a stable per-event identifier to key off of.
 
 ## Validation
 

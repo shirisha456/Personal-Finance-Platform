@@ -9,21 +9,22 @@ already established for other optional integrations.
 
 ## Scope note: what "market data" means in this phase
 
-The reference implementation's market-data functionality is a standalone
+A fully-featured market-data integration could be a standalone
 Kafka-consuming poller service (`market-data-service`) that runs on a
-schedule and publishes `prices.updated` events. That service depends on
-infrastructure — the transactional outbox and event contracts — that
-doesn't exist until Phase 7. Building a Kafka consumer with nothing to
-consume yet would be exactly the kind of half-finished, untestable
-scaffolding this rebuild is trying to avoid.
+schedule and publishes `prices.updated` events. That service would
+depend on infrastructure — the transactional outbox and event
+contracts — that doesn't exist until Phase 7. Building a Kafka consumer
+with nothing to consume yet would be exactly the kind of half-finished,
+untestable scaffolding this project is trying to avoid.
 
 So Phase 5 scopes "market data" to what's genuinely buildable and
 testable now: a synchronous, on-demand `POST /investments/prices/refresh`
 endpoint, behind the same provider-abstraction (`MarketDataProvider`)
-the eventual scheduled poller will also use. Extracting that poller into
-`services/market-data-service` in Phase 8+ is a real, planned piece of
-future work, not a gap being quietly hidden — it's called out here and
-will be called out again in whichever phase does it.
+a later scheduled poller can also use. Extracting that poller into
+`services/market-data-service` once the event pipeline exists (Phase 7+)
+is a real, planned piece of future work, not a gap being quietly
+hidden — it's called out here and was in fact built later, without a
+Kafka topic of its own (see [ADR-0014](adr/0014-market-data-service-no-kafka-topic.md)).
 
 ## Architecture
 
@@ -46,7 +47,7 @@ POST /investments/prices/refresh
 | Decision | Choice | Rejected alternative |
 |---|---|---|
 | Market-data scope this phase | Synchronous, on-demand refresh endpoint | The full scheduled Kafka-poller microservice — depends on Phase 7 infrastructure that doesn't exist yet |
-| Unconfigured-provider handling | `MarketDataNotConfigured` is itself an `AppError` subclass (503), so no per-route try/except is needed | The reference implementation's `PlaidNotConfigured` — a plain `RuntimeError` the router had to explicitly catch and translate |
+| Unconfigured-provider handling | `MarketDataNotConfigured` is itself an `AppError` subclass (503), so no per-route try/except is needed | A plain `RuntimeError` — would need an explicit try/except at every call site to catch and translate into the right HTTP status |
 | No mock/fallback price | A security's price is `null` until a real provider successfully prices it — never a synthetic default | Returning a fake price when unconfigured — would be indistinguishable from real data in a response body |
 | Security/holding relationships | No ORM `relationship()` between `Holding`/`Watchlist` and `Security` — responses are built by joining and passing both objects to a plain constructor function | SQLAlchemy `relationship()` + lazy attribute access — async SQLAlchemy requires either eager loading or an active greenlet context for lazy loads; explicit joins sidestep the whole class of `MissingGreenlet` bugs this could introduce |
 | Symbol normalization | Uppercased server-side via a Pydantic validator | Trusting client-supplied casing — "aapl" and "AAPL" would otherwise create two different `Security` rows for the same stock |

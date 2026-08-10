@@ -15,12 +15,12 @@ async def get_owned[T](
 ) -> T:
     """Fetch a row by primary key and confirm it belongs to `user_id`.
 
-    Centralizes what the reference implementation hand-rolled in every
-    router: a resource that doesn't exist and a resource that belongs to
-    someone else return the identical 404 — never distinguish "doesn't
-    exist" from "belongs to someone else" in the response, only in this
-    one place, so every module gets that guarantee for free instead of
-    re-implementing (and potentially getting wrong) the same check.
+    Centralized in one place rather than hand-rolled per router: a
+    resource that doesn't exist and a resource that belongs to someone
+    else return the identical 404 — never distinguish "doesn't exist"
+    from "belongs to someone else" in the response, so every module
+    gets that guarantee for free instead of re-implementing (and
+    potentially getting wrong) the same check.
     """
     obj = await db.get(model, id_)
     if obj is None or getattr(obj, user_id_attr) != user_id:

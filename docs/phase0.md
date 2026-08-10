@@ -32,7 +32,7 @@ starts in Phase 1.
 | Per-phase documentation | A `docs/phaseN.md` per phase (goal, decisions, tradeoffs, verification checklist), linked from the README phase table | A single running changelog — loses the "what did this phase actually decide and why" narrative that makes individual phases legible on their own |
 | ADR numbering | Start at `ADR-0001`, four-digit, zero-padded | Continue an arbitrary numbering scheme inherited from elsewhere | 
 | Git identity | Set per-repository (`git config` without `--global`) | Rely on global git config |
-| Compose project name | Pinned explicitly (`name: meridian-rebuild`) in `docker-compose.yml` | Default (directory-name-derived) project name — collided with leftover containers from an unrelated local "meridian"-named Compose project on the dev machine, surfaced as an orphan-container warning during verification |
+| Compose project name | Pinned explicitly (`name: meridian`) in `docker-compose.yml` | Default (directory-name-derived) project name — can vary silently across clones/CI checkouts with different folder names, and risks colliding with an unrelated local Compose project of the same default name |
 
 ## Tradeoffs
 
@@ -48,4 +48,4 @@ signal than no directory at all.
 - [x] `.github/workflows/ci.yml` is valid YAML
 - [x] Repository-local git identity verified (`git config user.name` /
       `user.email`, not global)
-- [x] Remote `origin` points at the new repository, not the reference one
+- [x] Remote `origin` points at this project's own GitHub repository

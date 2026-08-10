@@ -39,7 +39,7 @@ reimplementing the same fail-open pattern a third time. Falls under
 
 | Decision | Choice | Rejected alternative |
 |---|---|---|
-| Cache invalidation scope | Precise: only writes that actually change a cached computation's inputs invalidate it (transactions → budget_actual; recompute → networth) | The reference implementation invalidated `networth:{user}` on every transaction write too, even though net worth is a point-in-time snapshot derived from account balances, not transactions — a dependency that doesn't exist in this design |
+| Cache invalidation scope | Precise: only writes that actually change a cached computation's inputs invalidate it (transactions → budget_actual; recompute → networth) | Also invalidating `networth:{user}` on every transaction write — net worth is a point-in-time snapshot derived from account balances, not transactions, so that dependency doesn't actually exist |
 | Net worth asset/liability split | Classified by `AccountType` (credit/loan → liability), magnitude via `abs()` | Trusting the sign of `current_balance_minor` — fragile if a caller enters a credit balance as a positive "amount I owe" (the common real-world mental model) instead of following the schema's negative-for-liability convention |
 | Budget-actual "actual" calculation | Net of all transactions in the category+month (`-sum(amount_minor)`), so a refund offsets its original expense | Only counting negative (expense) transactions — would make a refunded purchase permanently count against the budget |
 | Snapshot/budget "upsert" | `SELECT` then `UPDATE`-or-`INSERT` in application code | `INSERT ... ON CONFLICT DO UPDATE` — the ORM-level version is simpler to read and test identically against SQLite (unit tests) and Postgres (integration/CI); see Tradeoffs for the cost of this choice |
@@ -59,8 +59,8 @@ reimplementing the same fail-open pattern a third time. Falls under
   occur in practice.
 - Budget-actual is scoped to categories that already have a budget set —
   a category with real spending but no budget doesn't appear in the
-  response. This matches the reference implementation's scope and is a
-  deliberate choice, not an oversight: the endpoint answers "how am I
+  response. This is a deliberate choice, not an oversight: the
+  endpoint answers "how am I
   doing against my budgets," not "here's all my spending."
 
 ## Extensibility

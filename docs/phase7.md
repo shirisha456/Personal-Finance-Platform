@@ -12,16 +12,16 @@ insights) consume directly.
 
 Four topics — `transactions.ingested`, `transactions.enriched`,
 `alerts.raised`, `insights.generated` — matching exactly what Phases
-8–10 will produce and consume. The reference implementation also defined
-`prices.updated` and `networth.snapshot.completed`, and I found neither
-is ever actually consumed by anything in that codebase. Since net worth
-here is computed synchronously (Phase 4) and market data is an on-demand
-endpoint (Phase 5), not a Kafka producer, and the phase plan has no slot
-for extracting a standalone market-data-service, adding those two topics
-now would repeat the exact dead-contract problem found in the reference
-implementation. If a standalone market-data poller is wanted later,
-that's a real scope decision to make explicitly then — not something to
-quietly decide by defining an unused topic today.
+8–10 will produce and consume. Two more candidate topics,
+`prices.updated` and `networth.snapshot.completed`, are deliberately
+not defined yet. Since net worth here is computed synchronously
+(Phase 4) and market data is an on-demand endpoint (Phase 5), not a
+Kafka producer, and the phase plan has no slot for extracting a
+standalone market-data-service, defining those two topics now would
+create a dead contract — an event schema with no consumer, silently
+untested and unused. If a standalone market-data poller is wanted
+later, that's a real scope decision to make explicitly then — not
+something to quietly decide by defining an unused topic today.
 
 ## Architecture
 
@@ -59,10 +59,10 @@ to warrant their own record. Summarized:
 
 | Decision | Choice | Rejected alternative |
 |---|---|---|
-| `libs/events` packaging | A real installable package (`pip install -e libs/events`), installed as an explicit separate step since a relative-path dependency isn't reliably expressible in `pyproject.toml` | `PYTHONPATH` hacks (what the reference implementation's Dockerfiles did) — works, but isn't a real package boundary; nothing enforces `libs/events`' own dependencies or lets it be versioned independently |
-| Event versioning | `version: int` field in the payload (ADR-0004) | Version in the topic name, or no versioning at all (the reference implementation) |
-| Kafka client | `aiokafka` + `asyncio.create_task` (ADR-0006) | `confluent-kafka` + APScheduler `BackgroundScheduler` (the reference implementation) — thread-safety risk against the async DB engine |
-| Outbox publish-then-mark ordering | A row is marked `published` in memory only *after* `send_and_wait` confirms delivery | The reference implementation marked `published=True` before delivery was confirmed — a real, silent event-loss bug, fixed here by construction rather than patched |
+| `libs/events` packaging | A real installable package (`pip install -e libs/events`), installed as an explicit separate step since a relative-path dependency isn't reliably expressible in `pyproject.toml` | `PYTHONPATH` hacks — works, but isn't a real package boundary; nothing enforces `libs/events`' own dependencies or lets it be versioned independently |
+| Event versioning | `version: int` field in the payload (ADR-0004) | Version in the topic name, or no versioning at all |
+| Kafka client | `aiokafka` + `asyncio.create_task` (ADR-0006) | `confluent-kafka` + APScheduler `BackgroundScheduler` — thread-safety risk against the async DB engine |
+| Outbox publish-then-mark ordering | A row is marked `published` in memory only *after* `send_and_wait` confirms delivery | Marking `published=True` before delivery is confirmed — a real, silent event-loss risk if the process crashes in between |
 | Which topics exist | Only the 4 that Phases 8-10 actually use | Also defining `prices.updated`/`networth.snapshot.completed` now, unused, "for later" |
 
 ## Tradeoffs

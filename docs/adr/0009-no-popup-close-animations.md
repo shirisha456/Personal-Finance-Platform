@@ -76,16 +76,15 @@ being unreliable somewhere in this stack.
 - **Add real CSS animations back later, once confirmed reliable in a
   normal (non-automated, foreground) browser tab** — deferred, not
   rejected. If a future phase revisits this, the fix should be
-  re-verified with a real visible browser session (this rebuild's
+  re-verified with a real visible browser session (this project's
   testing setup couldn't rule out the non-compositing-tab explanation
   with certainty), not assumed safe by default.
 
 ## Consequences
 
 - Dialogs, popovers, and selects open/close instantly with no
-  transition — a real, deliberate loss of polish versus the reference
-  implementation's animated versions, in exchange for closing actually
-  working.
+  transition — a real, deliberate loss of polish, in exchange for
+  closing actually working.
 - Any future addition to `components/ui/` that wraps a Base UI popup
   primitive should follow the same pattern (no animate classes, and if
   it's a new primitive type beyond Dialog/Popover/Select, verify its
