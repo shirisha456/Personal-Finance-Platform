@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     # between (see docs/adr/0010-direct-otlp-export-no-collector.md).
     otel_exporter_otlp_endpoint: str = ""
 
-    database_url: str = "postgresql+asyncpg://meridian:meridian@localhost:5433/meridian"
+    database_url: str = "postgresql+asyncpg://personal_finance_platform:personal_finance_platform@localhost:5433/personal_finance_platform"
 
     cors_origins: str = "http://localhost:3000"
 

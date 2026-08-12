@@ -542,7 +542,7 @@ for the full, explicit accounting of what that does and doesn't prove.
 - `deploy/docker-compose.prod.yml` — the production compose file for the
   single-EC2 path: only nginx exposes host ports, every service has a
   memory/CPU limit derived from real measurements, and secrets come from
-  a hand-created `/opt/meridian/secrets.env` (see
+  a hand-created `/opt/personal-finance-platform/secrets.env` (see
   `deploy/secrets.env.example`), never from Terraform state or a
   committed file.
 

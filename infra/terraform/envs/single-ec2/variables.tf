@@ -1,7 +1,7 @@
 variable "aws_profile" {
   description = "Named AWS CLI profile to use — never long-lived IAM user keys checked in anywhere."
   type        = string
-  default     = "meridian"
+  default     = "personal-finance-platform"
 }
 
 variable "aws_region" {
@@ -11,7 +11,7 @@ variable "aws_region" {
 
 variable "name" {
   type    = string
-  default = "meridian-portfolio"
+  default = "personal-finance-platform-portfolio"
 }
 
 variable "instance_type" {

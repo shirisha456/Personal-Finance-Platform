@@ -1,5 +1,5 @@
 # helm install notification-service ./worker -f values-notification.yaml \
-#   --set image.repository=<ecr-url>/meridian-notification-service
+#   --set image.repository=<ecr-url>/personal-finance-platform-notification-service
 #
 # Fixed replica count, not KEDA — this service fans out to Redis
 # Pub/Sub, not a downstream Kafka topic other services scale against,

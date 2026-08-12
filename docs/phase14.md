@@ -108,7 +108,7 @@ to application code, now applied to the infrastructure code too.
       (`yaml.safe_load`, confirms all 15 services + 8 named volumes
       parse correctly); **not** validated via `docker compose config`
       against the real stack, since it references
-      `/opt/meridian/secrets.env` — a path that only exists on the
+      `/opt/personal-finance-platform/secrets.env` — a path that only exists on the
       actual target EC2 host, not this development machine. Stated as a
       gap, not silently skipped.
 - [x] `.github/workflows/ci.yml` — YAML validated

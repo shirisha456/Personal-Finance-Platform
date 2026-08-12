@@ -17,7 +17,7 @@ them against a real `docker compose up` stack on every push to `main`.
   while the consumer is down, restarts the container, confirms it gets
   categorized once the consumer group rejoins and reprocesses the
   pending message. References this project's actual compose container
-  naming (`meridian-enrichment-service-1`).
+  naming (`personal-finance-platform-enrichment-service-1`).
 - **`chaos/test_outbox_broker_outage.py`** — a different failure mode:
   the *broker itself* down, not a consumer. Stops Redpanda entirely,
   creates a transaction, and asserts three things: the request still

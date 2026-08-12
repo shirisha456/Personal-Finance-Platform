@@ -53,8 +53,8 @@ fi
 # Already preinstalled on Canonical's AMI — just make sure it's running.
 snap start amazon-ssm-agent || systemctl restart snap.amazon-ssm-agent.amazon-ssm-agent.service || true
 
-mkdir -p /opt/meridian
-chown ubuntu:ubuntu /opt/meridian
+mkdir -p /opt/personal-finance-platform
+chown ubuntu:ubuntu /opt/personal-finance-platform
 
 echo "Bootstrap complete. Connect via SSM Session Manager to clone the repo and deploy (see deploy/README.md)." \
-  > /var/log/meridian-bootstrap-done
+  > /var/log/personal-finance-platform-bootstrap-done

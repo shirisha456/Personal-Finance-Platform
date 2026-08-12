@@ -81,7 +81,7 @@ require reading fifteen separate documents to answer.
 - **Secrets never committed, never in Terraform state**: every
   `.env.example`/`secrets.env.example` is a template with blank/
   placeholder values; the real production secrets file
-  (`/opt/meridian/secrets.env`) is created by hand on the deployment
+  (`/opt/personal-finance-platform/secrets.env`) is created by hand on the deployment
   host over an SSM session and never touches git or Terraform's state
   file (see `deploy/README.md`).
 - **Money is never a float**: every amount is an integer in minor units

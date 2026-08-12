@@ -1,6 +1,6 @@
 {{/*
 Fixed name, not release-name-prefixed — this chart is always installed
-as exactly one release named "core-api" in the meridian namespace, so
+as exactly one release named "core-api" in the personal-finance-platform namespace, so
 there's no need for the usual "multiple releases of the same chart"
 templating.
 */}}

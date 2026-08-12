@@ -1,7 +1,7 @@
 replicaCount: 2
 
 image:
-  # Set via --set image.repository=<ecr-url>/meridian-core-api at install time.
+  # Set via --set image.repository=<ecr-url>/personal-finance-platform-core-api at install time.
   repository: ""
   tag: latest
   pullPolicy: IfNotPresent
@@ -35,7 +35,7 @@ ingress:
   # cluster — not nginx-ingress. No tls: block here deliberately; TLS
   # termination happens at the ALB via annotations/ACM, not in-chart.
   className: alb
-  host: api.meridian.example.com
+  host: api.personal-finance-platform.example.com
   annotations:
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
@@ -47,7 +47,7 @@ ingress:
 # by existingSecretName below.
 env:
   ENVIRONMENT: production
-  CORS_ORIGINS: https://app.meridian.example.com
+  CORS_ORIGINS: https://app.personal-finance-platform.example.com
 
 existingSecretName: core-api-secrets
 

@@ -1,5 +1,5 @@
 # helm install anomaly-service ./worker -f values-anomaly.yaml \
-#   --set image.repository=<ecr-url>/meridian-anomaly-service
+#   --set image.repository=<ecr-url>/personal-finance-platform-anomaly-service
 
 nameOverride: anomaly-service
 httpPort: 8081

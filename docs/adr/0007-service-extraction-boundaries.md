@@ -68,7 +68,7 @@ whichever service cares (Phase 9's `anomaly-service`) consume it.
   Postgres-level permissions boundary (a read/write-scoped role for the
   consumer services, not the migration-running role) is real future
   hardening, not implemented at this phase's scope (all services
-  currently connect with the same `meridian` user for local-dev
+  currently connect with the same `personal_finance_platform` user for local-dev
   simplicity).
 
 ## Validation

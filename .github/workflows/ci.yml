@@ -35,18 +35,18 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: meridian
-          POSTGRES_PASSWORD: meridian
-          POSTGRES_DB: meridian
+          POSTGRES_USER: personal_finance_platform
+          POSTGRES_PASSWORD: personal_finance_platform
+          POSTGRES_DB: personal_finance_platform
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U meridian"
+          --health-cmd "pg_isready -U personal_finance_platform"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
     env:
-      DATABASE_URL: postgresql+asyncpg://meridian:meridian@localhost:5432/meridian
+      DATABASE_URL: postgresql+asyncpg://personal_finance_platform:personal_finance_platform@localhost:5432/personal_finance_platform
       ENVIRONMENT: test
     steps:
       - uses: actions/checkout@v4

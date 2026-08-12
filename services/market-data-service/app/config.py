@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     service_version: str = "0.1.0"
 
-    database_url: str = "postgresql+asyncpg://meridian:meridian@localhost:5433/meridian"
+    database_url: str = "postgresql+asyncpg://personal_finance_platform:personal_finance_platform@localhost:5433/personal_finance_platform"
 
     # Optional — matches every other optional integration in this project
     # (app/investments/market_data.py in core-api has the identical

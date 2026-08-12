@@ -34,7 +34,7 @@ serviceAccount:
 # reflects the real bottleneck for this shape of service.
 keda:
   enabled: false
-  kafkaBootstrapServers: redpanda.meridian.svc.cluster.local:9092
+  kafkaBootstrapServers: redpanda.personal-finance-platform.svc.cluster.local:9092
   consumerGroup: ""
   topic: ""
   lagThreshold: 50

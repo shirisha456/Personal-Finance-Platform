@@ -1,5 +1,5 @@
 # helm install enrichment-service ./worker -f values-enrichment.yaml \
-#   --set image.repository=<ecr-url>/meridian-enrichment-service
+#   --set image.repository=<ecr-url>/personal-finance-platform-enrichment-service
 
 nameOverride: enrichment-service
 httpPort: 8080

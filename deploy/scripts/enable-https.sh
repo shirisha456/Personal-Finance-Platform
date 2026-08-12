@@ -16,12 +16,12 @@ fi
 DOMAIN="$1"
 EMAIL="$2"
 
-cd /opt/meridian
+cd /opt/personal-finance-platform
 
 echo "Requesting a certificate for $DOMAIN..."
 docker run --rm \
-  -v meridian_certbot_www:/var/www/certbot \
-  -v meridian_certbot_certs:/etc/letsencrypt \
+  -v personal-finance-platform_certbot_www:/var/www/certbot \
+  -v personal-finance-platform_certbot_certs:/etc/letsencrypt \
   certbot/certbot certonly --webroot \
   -w /var/www/certbot \
   -d "$DOMAIN" \
@@ -40,4 +40,4 @@ docker compose -f deploy/docker-compose.prod.yml restart nginx
 echo "HTTPS enabled for $DOMAIN."
 echo ""
 echo "Certificates expire every 90 days. Add this to cron for renewal:"
-echo "  0 4 * * 0 docker run --rm -v meridian_certbot_www:/var/www/certbot -v meridian_certbot_certs:/etc/letsencrypt certbot/certbot renew --webroot -w /var/www/certbot && docker compose -f /opt/meridian/deploy/docker-compose.prod.yml restart nginx"
+echo "  0 4 * * 0 docker run --rm -v personal-finance-platform_certbot_www:/var/www/certbot -v personal-finance-platform_certbot_certs:/etc/letsencrypt certbot/certbot renew --webroot -w /var/www/certbot && docker compose -f /opt/personal-finance-platform/deploy/docker-compose.prod.yml restart nginx"

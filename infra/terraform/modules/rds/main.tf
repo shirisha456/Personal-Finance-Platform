@@ -47,8 +47,8 @@ resource "aws_db_instance" "this" {
   max_allocated_storage = var.max_allocated_storage_gb
   storage_encrypted     = true
 
-  db_name  = "meridian"
-  username = "meridian"
+  db_name  = "personal_finance_platform"
+  username = "personal_finance_platform"
   password = random_password.master.result
 
   db_subnet_group_name   = aws_db_subnet_group.this.name

@@ -13,10 +13,10 @@ terraform {
   # clear what's missing if this ever gets applied for real:
   #
   # backend "s3" {
-  #   bucket         = "meridian-terraform-state"
+  #   bucket         = "personal-finance-platform-terraform-state"
   #   key            = "dev/terraform.tfstate"
   #   region         = "us-east-1"
-  #   dynamodb_table = "meridian-terraform-locks"
+  #   dynamodb_table = "personal-finance-platform-terraform-locks"
   #   encrypt        = true
   # }
   #
@@ -29,7 +29,7 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Project     = "meridian"
+      Project     = "personal-finance-platform"
       Environment = var.environment
       ManagedBy   = "terraform"
     }
@@ -37,7 +37,7 @@ provider "aws" {
 }
 
 locals {
-  name = "meridian-${var.environment}"
+  name = "personal-finance-platform-${var.environment}"
 }
 
 module "vpc" {

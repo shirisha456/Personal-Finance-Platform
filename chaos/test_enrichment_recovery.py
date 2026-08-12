@@ -24,7 +24,7 @@ import urllib.request
 from uuid import uuid4
 
 BASE_URL = "http://localhost:8000"
-CONTAINER_NAME = "meridian-enrichment-service-1"
+CONTAINER_NAME = "personal-finance-platform-enrichment-service-1"
 
 
 def _request(method: str, path: str, token: str | None = None, body: dict | None = None) -> tuple[int, dict]:

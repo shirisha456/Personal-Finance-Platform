@@ -13,7 +13,7 @@ variable "oidc_provider_url" {
 
 variable "namespace" {
   type    = string
-  default = "meridian"
+  default = "personal-finance-platform"
 }
 
 variable "service_account_name" {

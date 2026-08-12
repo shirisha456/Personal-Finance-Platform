@@ -30,7 +30,7 @@ import urllib.request
 from uuid import uuid4
 
 BASE_URL = "http://localhost:8000"
-REDPANDA_CONTAINER = "meridian-redpanda-1"
+REDPANDA_CONTAINER = "personal-finance-platform-redpanda-1"
 
 
 def _request(method: str, path: str, token: str | None = None, body: dict | None = None) -> tuple[int, dict]:

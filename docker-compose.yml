@@ -2,21 +2,21 @@
 # directory name, which can vary across clones/CI checkouts) so this
 # project's containers and volumes stay identifiable and consistent
 # regardless of what the checkout folder happens to be named.
-name: meridian
+name: personal-finance-platform
 
 services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: meridian
-      POSTGRES_PASSWORD: meridian
-      POSTGRES_DB: meridian
+      POSTGRES_USER: personal_finance_platform
+      POSTGRES_PASSWORD: personal_finance_platform
+      POSTGRES_DB: personal_finance_platform
     ports:
       - "5433:5432"
     volumes:
-      - meridian_pg_data:/var/lib/postgresql/data
+      - personal_finance_platform_pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U meridian"]
+      test: ["CMD-SHELL", "pg_isready -U personal_finance_platform"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -75,7 +75,7 @@ services:
       context: .
       dockerfile: apps/core-api/Dockerfile
     environment:
-      DATABASE_URL: postgresql+asyncpg://meridian:meridian@postgres:5432/meridian
+      DATABASE_URL: postgresql+asyncpg://personal_finance_platform:personal_finance_platform@postgres:5432/personal_finance_platform
       REDIS_URL: redis://redis:6379/0
       KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
       ENVIRONMENT: development
@@ -103,7 +103,7 @@ services:
       context: .
       dockerfile: services/enrichment-service/Dockerfile
     environment:
-      DATABASE_URL: postgresql+asyncpg://meridian:meridian@postgres:5432/meridian
+      DATABASE_URL: postgresql+asyncpg://personal_finance_platform:personal_finance_platform@postgres:5432/personal_finance_platform
       REDIS_URL: redis://redis:6379/0
       KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
       ENVIRONMENT: development
@@ -122,7 +122,7 @@ services:
       context: .
       dockerfile: services/anomaly-service/Dockerfile
     environment:
-      DATABASE_URL: postgresql+asyncpg://meridian:meridian@postgres:5432/meridian
+      DATABASE_URL: postgresql+asyncpg://personal_finance_platform:personal_finance_platform@postgres:5432/personal_finance_platform
       KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
       ENVIRONMENT: development
       OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4318
@@ -155,7 +155,7 @@ services:
       context: .
       dockerfile: services/market-data-service/Dockerfile
     environment:
-      DATABASE_URL: postgresql+asyncpg://meridian:meridian@postgres:5432/meridian
+      DATABASE_URL: postgresql+asyncpg://personal_finance_platform:personal_finance_platform@postgres:5432/personal_finance_platform
       ENVIRONMENT: development
       MARKET_DATA_API_KEY: ${MARKET_DATA_API_KEY:-}
       MARKET_DATA_BASE_URL: https://api.twelvedata.com
@@ -217,4 +217,4 @@ services:
       - tempo
 
 volumes:
-  meridian_pg_data:
+  personal_finance_platform_pg_data:

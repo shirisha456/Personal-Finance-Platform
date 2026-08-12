@@ -17,7 +17,7 @@
 #   - Grafana's anonymous admin access is OFF here (it's convenience-only
 #     in dev — see docs/phase12.md); a real admin password is required.
 #
-# Secrets come from /opt/meridian/secrets.env (see secrets.env.example),
+# Secrets come from /opt/personal-finance-platform/secrets.env (see secrets.env.example),
 # created by hand on the host, never committed, never in Terraform
 # state. DATABASE_URL is stored there as one complete pre-assembled
 # connection string rather than built from a separate POSTGRES_PASSWORD
@@ -26,7 +26,7 @@
 # environment — two mechanisms that don't share values, so storing the
 # full URL once sidesteps needing both.
 
-name: meridian
+name: personal-finance-platform
 
 x-logging: &default-logging
   driver: json-file
@@ -39,14 +39,14 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     logging: *default-logging
-    env_file: [/opt/meridian/secrets.env]
+    env_file: [/opt/personal-finance-platform/secrets.env]
     environment:
-      POSTGRES_USER: meridian
-      POSTGRES_DB: meridian
+      POSTGRES_USER: personal_finance_platform
+      POSTGRES_DB: personal_finance_platform
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U meridian"]
+      test: ["CMD-SHELL", "pg_isready -U personal_finance_platform"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -116,7 +116,7 @@ services:
       dockerfile: apps/core-api/Dockerfile
     restart: unless-stopped
     logging: *default-logging
-    env_file: [/opt/meridian/secrets.env]
+    env_file: [/opt/personal-finance-platform/secrets.env]
     environment:
       REDIS_URL: redis://redis:6379/0
       KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
@@ -160,7 +160,7 @@ services:
     restart: unless-stopped
     stop_grace_period: 30s # let an in-flight message finish and commit its offset before SIGKILL
     logging: *default-logging
-    env_file: [/opt/meridian/secrets.env]
+    env_file: [/opt/personal-finance-platform/secrets.env]
     environment:
       REDIS_URL: redis://redis:6379/0
       KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
@@ -186,7 +186,7 @@ services:
     restart: unless-stopped
     stop_grace_period: 30s
     logging: *default-logging
-    env_file: [/opt/meridian/secrets.env]
+    env_file: [/opt/personal-finance-platform/secrets.env]
     environment:
       KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
       ENVIRONMENT: production
@@ -286,7 +286,7 @@ services:
     image: grafana/grafana:11.4.0
     restart: unless-stopped
     logging: *default-logging
-    env_file: [/opt/meridian/secrets.env] # GF_SECURITY_ADMIN_PASSWORD
+    env_file: [/opt/personal-finance-platform/secrets.env] # GF_SECURITY_ADMIN_PASSWORD
     environment:
       GF_AUTH_ANONYMOUS_ENABLED: "false"
     volumes:

@@ -21,7 +21,7 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Project     = "meridian"
+      Project     = "personal-finance-platform"
       Environment = "portfolio"
       ManagedBy   = "terraform"
     }

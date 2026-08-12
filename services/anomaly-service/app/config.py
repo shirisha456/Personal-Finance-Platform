@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     service_version: str = "0.1.0"
 
-    database_url: str = "postgresql+asyncpg://meridian:meridian@localhost:5433/meridian"
+    database_url: str = "postgresql+asyncpg://personal_finance_platform:personal_finance_platform@localhost:5433/personal_finance_platform"
     kafka_bootstrap_servers: str = "localhost:19092"
     consumer_group_id: str = "anomaly-service"
 

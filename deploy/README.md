@@ -25,11 +25,11 @@ tradeoff, and this instance size, were chosen.
 3. Inside the session:
    ```bash
    sudo su - ubuntu
-   cd /opt/meridian
+   cd /opt/personal-finance-platform
    git clone https://github.com/shirisha456/Personal-Finance-Platform.git .
-   cp deploy/secrets.env.example /opt/meridian/secrets.env
-   nano /opt/meridian/secrets.env   # fill in every value — see that file's own comments
-   chmod 600 /opt/meridian/secrets.env
+   cp deploy/secrets.env.example /opt/personal-finance-platform/secrets.env
+   nano /opt/personal-finance-platform/secrets.env   # fill in every value — see that file's own comments
+   chmod 600 /opt/personal-finance-platform/secrets.env
    docker compose -f deploy/docker-compose.prod.yml up -d --build
    ```
 4. Verify: `docker compose -f deploy/docker-compose.prod.yml ps` should
@@ -69,7 +69,7 @@ is purely additive (safe either way) before doing this.
 
 - **Logical** (fast, small, good for "I fat-fingered a delete" or a bad
   migration): `deploy/scripts/backup.sh`, intended to run nightly via
-  cron. Writes a gzipped `pg_dump` to `/opt/meridian/backups/` and
+  cron. Writes a gzipped `pg_dump` to `/opt/personal-finance-platform/backups/` and
   prunes anything older than 14 days. **This writes to the same EBS
   volume it's backing up — there's no off-box copy by default.** Adding
   `aws s3 cp` (with an S3 bucket and IAM permission for it) is a
@@ -78,7 +78,7 @@ is purely additive (safe either way) before doing this.
   **not automated by this Terraform**. Either attach an AWS Data
   Lifecycle Manager (DLM) policy to the volume, or snapshot by hand:
   ```bash
-  aws ec2 create-snapshot --volume-id <vol-id> --description "meridian manual backup"
+  aws ec2 create-snapshot --volume-id <vol-id> --description "personal-finance-platform manual backup"
   ```
 - Redpanda's own data lives in its own named volume with a short
   retention window (`observability`/broker config, not durability —
@@ -88,7 +88,7 @@ is purely additive (safe either way) before doing this.
 
 Restore a logical backup:
 ```bash
-deploy/scripts/restore.sh /opt/meridian/backups/meridian-<timestamp>.sql.gz
+deploy/scripts/restore.sh /opt/personal-finance-platform/backups/personal-finance-platform-<timestamp>.sql.gz
 ```
 (Interactive confirmation required — this is destructive.)
 
@@ -99,7 +99,7 @@ deploy/scripts/restore.sh /opt/meridian/backups/meridian-<timestamp>.sql.gz
    Terraform-managed resource independent of the instance's lifecycle).
 2. Attach the latest EBS snapshot, or restore Postgres from the latest
    `backup.sh` dump once the new instance is up.
-3. Recreate `/opt/meridian/secrets.env` by hand — it was never in the
+3. Recreate `/opt/personal-finance-platform/secrets.env` by hand — it was never in the
    EBS snapshot's git history and never will be; keep a copy in a
    password manager.
 

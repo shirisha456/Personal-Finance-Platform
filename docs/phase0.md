@@ -32,7 +32,7 @@ starts in Phase 1.
 | Per-phase documentation | A `docs/phaseN.md` per phase (goal, decisions, tradeoffs, verification checklist), linked from the README phase table | A single running changelog — loses the "what did this phase actually decide and why" narrative that makes individual phases legible on their own |
 | ADR numbering | Start at `ADR-0001`, four-digit, zero-padded | Continue an arbitrary numbering scheme inherited from elsewhere | 
 | Git identity | Set per-repository (`git config` without `--global`) | Rely on global git config |
-| Compose project name | Pinned explicitly (`name: meridian`) in `docker-compose.yml` | Default (directory-name-derived) project name — can vary silently across clones/CI checkouts with different folder names, and risks colliding with an unrelated local Compose project of the same default name |
+| Compose project name | Pinned explicitly (`name: personal-finance-platform`) in `docker-compose.yml` | Default (directory-name-derived) project name — can vary silently across clones/CI checkouts with different folder names, and risks colliding with an unrelated local Compose project of the same default name |
 
 ## Tradeoffs
 
