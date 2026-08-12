@@ -117,7 +117,7 @@ class PlaidRestClient:
             "/link/token/create",
             {
                 "user": {"client_user_id": str(user_id)},
-                "client_name": "Meridian",
+                "client_name": "Personal Finance Platform",
                 "products": ["transactions"],
                 "country_codes": ["US"],
                 "language": "en",

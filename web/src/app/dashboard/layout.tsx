@@ -55,7 +55,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
           <div className="flex items-center gap-2">
-            <span className="text-lg font-semibold">Meridian</span>
+            <span className="text-lg font-semibold">Personal Finance Platform</span>
           </div>
           <div className="flex items-center gap-3">
             <NotificationBell />

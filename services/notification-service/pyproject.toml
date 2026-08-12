@@ -1,7 +1,7 @@
 [project]
-name = "meridian-notification-service"
+name = "personal-finance-platform-notification-service"
 version = "0.1.0"
-description = "Meridian notification-service — fans out Kafka alerts/insights to per-user Redis pub/sub channels"
+description = "Personal Finance Platform notification-service — fans out Kafka alerts/insights to per-user Redis pub/sub channels"
 requires-python = ">=3.12"
 # meridian-events (libs/events) is installed as a separate step — see
 # docs/phase7.md.

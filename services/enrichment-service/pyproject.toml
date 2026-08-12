@@ -1,7 +1,7 @@
 [project]
-name = "meridian-enrichment-service"
+name = "personal-finance-platform-enrichment-service"
 version = "0.1.0"
-description = "Meridian enrichment-service — categorizes ingested transactions"
+description = "Personal Finance Platform enrichment-service — categorizes ingested transactions"
 requires-python = ">=3.12"
 # meridian-events (libs/events) is installed as a separate step, same
 # reasoning as apps/core-api/pyproject.toml — see docs/phase7.md.

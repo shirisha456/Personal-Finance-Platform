@@ -1,4 +1,4 @@
-# Deploying Meridian to a single EC2 instance
+# Deploying Personal Finance Platform to a single EC2 instance
 
 A single box behind nginx, running Postgres, Redis, Redpanda, all four
 app services (core-api, web, enrichment-service, anomaly-service,
@@ -26,7 +26,7 @@ tradeoff, and this instance size, were chosen.
    ```bash
    sudo su - ubuntu
    cd /opt/meridian
-   git clone https://github.com/shirisha456/Meridian.git .
+   git clone https://github.com/shirisha456/Personal-Finance-Platform.git .
    cp deploy/secrets.env.example /opt/meridian/secrets.env
    nano /opt/meridian/secrets.env   # fill in every value — see that file's own comments
    chmod 600 /opt/meridian/secrets.env

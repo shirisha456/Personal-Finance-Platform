@@ -1,7 +1,7 @@
 [project]
-name = "meridian-anomaly-service"
+name = "personal-finance-platform-anomaly-service"
 version = "0.1.0"
-description = "Meridian anomaly-service — detects duplicate charges, spend spikes, and subscription price increases"
+description = "Personal Finance Platform anomaly-service — detects duplicate charges, spend spikes, and subscription price increases"
 requires-python = ">=3.12"
 # meridian-events (libs/events) is installed as a separate step — see
 # docs/phase7.md.

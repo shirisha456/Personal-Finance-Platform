@@ -39,7 +39,7 @@ export default function LoginPage() {
     <main className="flex flex-1 items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Sign in to Meridian</CardTitle>
+          <CardTitle>Sign in to Personal Finance Platform</CardTitle>
           <CardDescription>Enter your email and password to continue.</CardDescription>
         </CardHeader>
         <CardContent>

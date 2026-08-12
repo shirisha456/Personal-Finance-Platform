@@ -1,6 +1,6 @@
 {
   "uid": "meridian-overview",
-  "title": "Meridian — Pipeline Overview",
+  "title": "Personal Finance Platform — Pipeline Overview",
   "timezone": "browser",
   "refresh": "10s",
   "time": { "from": "now-1h", "to": "now" },

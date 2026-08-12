@@ -7,7 +7,7 @@ Accepted
 ## Context
 
 `infra/terraform/envs/single-ec2` provisions the one instance meant to
-actually run Meridian in production (see
+actually run this platform in production (see
 [ADR-0011](0011-terraform-written-not-applied.md)). It needs a real
 instance size, not a guess — this ADR records the measurement this was
 based on, so the reasoning can be checked and redone if the stack's

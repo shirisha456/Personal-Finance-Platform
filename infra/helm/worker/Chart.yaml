@@ -1,7 +1,7 @@
 apiVersion: v2
 name: worker
 description: >-
-  Generic chart for Meridian's Kafka consumer services — one chart, one
+  Generic chart for Personal Finance Platform's Kafka consumer services — one chart, one
   values file per service (enrichment-service, anomaly-service,
   notification-service). See ADR-0007 (service extraction boundaries)
   for why these are separate deployables in the first place.

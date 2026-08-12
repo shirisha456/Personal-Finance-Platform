@@ -1,7 +1,7 @@
 [project]
-name = "meridian-market-data-service"
+name = "personal-finance-platform-market-data-service"
 version = "0.1.0"
-description = "Meridian market-data-service — scheduled poller pricing every tracked security"
+description = "Personal Finance Platform market-data-service — scheduled poller pricing every tracked security"
 requires-python = ">=3.12"
 dependencies = [
     "httpx>=0.27",

@@ -1,7 +1,7 @@
 [project]
-name = "meridian-core-api"
+name = "personal-finance-platform-core-api"
 version = "0.1.0"
-description = "Meridian core API — FastAPI backend"
+description = "Personal Finance Platform core API — FastAPI backend"
 requires-python = ">=3.12"
 # meridian-events (libs/events) is NOT listed here — a relative sibling
 # path isn't a reliable PEP 508 dependency string across pip versions.

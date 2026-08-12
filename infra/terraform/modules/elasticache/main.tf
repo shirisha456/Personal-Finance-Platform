@@ -33,7 +33,7 @@ resource "aws_elasticache_subnet_group" "this" {
 # Pub/Sub fan-out (see ADR-0002, fail-open-by-design for the first three).
 resource "aws_elasticache_replication_group" "this" {
   replication_group_id = var.name
-  description          = "Meridian Redis - cache, idempotency store, rate limiter, pub/sub"
+  description          = "Personal Finance Platform Redis - cache, idempotency store, rate limiter, pub/sub"
 
   engine         = "redis"
   engine_version = "7.1"

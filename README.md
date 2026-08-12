@@ -1,4 +1,4 @@
-# Meridian
+# Personal Finance Platform
 
 A cloud-native personal finance and investment platform: accounts and
 transactions, Plaid bank sync, budgets and savings goals, investment
@@ -20,7 +20,7 @@ Personal finance data is scattered across banks, brokerages, and manual
 tracking, and turning it into a single accurate picture — accounts,
 spending by category, budget adherence, net worth, investment performance —
 usually means either a spreadsheet or trusting a third party with
-read access to every account. Meridian centralizes that view behind
+read access to every account. This platform centralizes that view behind
 authentication you control, syncs transactions automatically where
 possible (Plaid), and processes them asynchronously so categorization
 and anomaly detection don't block the request that created them.
@@ -427,8 +427,8 @@ docker compose up -d tempo prometheus loki promtail grafana
 
 - **Grafana** — `http://localhost:3001` (anonymous Admin access, no
   login — a local-dev-only setting, see
-  [`docs/phase12.md`](docs/phase12.md)). The "Meridian — Pipeline
-  Overview" dashboard is provisioned automatically; Prometheus, Loki,
+  [`docs/phase12.md`](docs/phase12.md)). The "Personal Finance Platform —
+  Pipeline Overview" dashboard is provisioned automatically; Prometheus, Loki,
   and Tempo are pre-wired as datasources.
 - **Prometheus** — `http://localhost:9090`; scrapes `core-api:8000` and
   each worker's health-server port.

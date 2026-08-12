@@ -1,4 +1,4 @@
-# Case Study: Meridian
+# Case Study: Personal Finance Platform
 
 ## Problem statement
 

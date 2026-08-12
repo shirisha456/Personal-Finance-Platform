@@ -1,6 +1,6 @@
 # Architecture
 
-System diagrams for Meridian, current as of Phase 15 (all 16 phases
+System diagrams for Personal Finance Platform, current as of Phase 15 (all 16 phases
 complete). For the reasoning *behind* each of these — not just what the
 system looks like, but why it's shaped this way — see the per-phase
 docs (`docs/phase0.md` onward) and the ADRs under `docs/adr/`. This

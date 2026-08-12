@@ -83,7 +83,7 @@ docker compose up -d tempo prometheus loki promtail grafana
 ```
 
 Open Grafana at `http://localhost:3001` (anonymous admin access in
-dev — no login). The "Meridian — Pipeline Overview" dashboard is
+dev — no login). The "Personal Finance Platform — Pipeline Overview" dashboard is
 already provisioned. To see the actual distributed trace from step 3:
 
 1. Go to Explore → select the **Tempo** datasource.

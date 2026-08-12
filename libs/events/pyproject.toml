@@ -1,7 +1,7 @@
 [project]
 name = "meridian-events"
 version = "0.1.0"
-description = "Shared Pydantic event contracts for Meridian's Kafka topics"
+description = "Shared Pydantic event contracts for Personal Finance Platform's Kafka topics"
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.9",

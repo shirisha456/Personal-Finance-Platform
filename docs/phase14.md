@@ -2,8 +2,8 @@
 
 ## Goal
 
-Real, reviewable infrastructure-as-code for actually running Meridian
-somewhere: Terraform (two environments — a full EKS-based `dev`
+Real, reviewable infrastructure-as-code for actually running this
+platform somewhere: Terraform (two environments — a full EKS-based `dev`
 environment, and a `single-ec2` environment that's the one path meant
 to actually be applied), Helm charts for the EKS path, a production
 `docker-compose.prod.yml` + nginx + backup/restore scripts for the
